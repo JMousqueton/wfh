@@ -2,6 +2,9 @@
    WFH Planner – Beautiful Glassmorphism Theme
    ============================================================ */
 
+/* Safety net: ensure d-none works even if Bootstrap CSS is blocked */
+.d-none { display: none !important; }
+
 /* ---------- CSS Variables ---------- */
 :root {
   --glass-bg:           rgba(255, 255, 255, 0.07);

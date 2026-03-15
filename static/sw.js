@@ -32,6 +32,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   // Never intercept API calls – always go to the network
   if (e.request.url.includes('/api/')) return;
+  // Never intercept cross-origin requests (CDN, fonts, etc.)
+  if (!e.request.url.startsWith(self.location.origin)) return;
 
   if (e.request.mode === 'navigate') {
     // Network-first for page navigations
