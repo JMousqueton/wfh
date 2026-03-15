@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="WFH Planner" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <title>WFH Planner</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- =========================================================
+       LOGIN VIEW
+       ========================================================= -->
+  <div id="loginView" class="view">
+    <div id="loginCard" class="login-card">
+
+      <div class="login-logo">
+        <div class="logo-icon-wrap">
+          <i class="fas fa-house-chimney"></i>
+        </div>
+        <h1 class="logo-title">WFH Planner</h1>
+        <p class="logo-subtitle" data-i18n="logoSubtitle">Work From Home Schedule</p>
+      </div>
+
+      <form id="loginForm" autocomplete="on">
+        <div class="field-group">
+          <div class="field-wrap">
+            <i class="fas fa-user field-icon"></i>
+            <input type="text" id="username" class="field-input"
+              data-i18n-placeholder="usernamePlaceholder"
+              placeholder="Username" autocomplete="username" required />
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-wrap">
+            <i class="fas fa-lock field-icon"></i>
+            <input type="password" id="password" class="field-input"
+              data-i18n-placeholder="passwordPlaceholder"
+              placeholder="Password" autocomplete="current-password" required />
+            <button type="button" id="togglePassword" class="field-action">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div id="loginError" class="login-error d-none">
+          <i class="fas fa-circle-exclamation"></i>
+          <span data-i18n="loginError">Invalid username or password</span>
+        </div>
+
+        <button type="submit" class="btn-sign-in">
+          <span data-i18n="signIn">Sign In</span>
+          <i class="fas fa-arrow-right"></i>
+        </button>
+      </form>
+
+      <div class="login-users">
+        <div class="login-user-badge man">
+          <div class="icon-wrap"><i class="fas fa-person"></i></div>
+          <span id="loginUser1"></span>
+        </div>
+        <div class="login-users-sep"><i class="fas fa-heart"></i></div>
+        <div class="login-user-badge woman">
+          <div class="icon-wrap"><i class="fas fa-person-dress"></i></div>
+          <span id="loginUser2"></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- =========================================================
+       APP VIEW
+       ========================================================= -->
+  <div id="appView" class="view d-none">
+
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-icon"><i class="fas fa-house-chimney"></i></div>
+        <div class="brand-text">
+          <span class="brand-name">WFH Planner</span>
+          <span id="weekRange" class="brand-week">…</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div id="userBadge" class="user-badge user-badge-btn" role="button" tabindex="0" data-i18n-title="profileTitle"></div>
+        <button id="logoutBtn" class="btn-icon danger" data-i18n-title="logout">
+          <i class="fas fa-right-from-bracket"></i>
+        </button>
+      </div>
+    </header>
+
+    <nav class="week-nav-bar">
+      <button id="prevWeek" class="btn-week-nav">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <button id="todayBtn" class="btn-week-today">
+        <i class="fas fa-calendar-day"></i>
+        <span data-i18n="today">Today</span>
+      </button>
+      <button id="nextWeek" class="btn-week-nav">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </nav>
+
+    <main class="calendar-main">
+      <div id="weekGrid" class="week-grid"></div>
+    </main>
+
+    <footer class="app-footer">
+      <div id="footerLegend" class="footer-legend"></div>
+      <p class="footer-tip">
+        <i class="fas fa-hand-pointer"></i>
+        <span data-i18n="tapToToggle">Tap your own row to toggle status</span>
+      </p>
+    </footer>
+
+  </div>
+
+
+  <!-- iOS install banner -->
+  <div id="iosInstallBanner" class="ios-install-banner d-none">
+    <div class="ios-install-content">
+      <i class="fas fa-house-chimney ios-install-icon"></i>
+      <div class="ios-install-text">
+        <strong data-i18n="installTitle">Install WFH Planner</strong>
+        <span id="iosInstallHint"></span>
+      </div>
+    </div>
+    <button id="iosInstallClose" class="ios-install-close"><i class="fas fa-xmark"></i></button>
+  </div>
+
+
+  <!-- =========================================================
+       PROFILE VIEW
+       ========================================================= -->
+  <div id="profileView" class="view d-none">
+
+    <header class="app-header">
+      <button id="backBtn" class="btn-icon">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <h2 class="profile-header-title" data-i18n="profileTitle">Profile</h2>
+      <div style="width:40px"></div><!-- balance spacer -->
+    </header>
+
+    <div class="profile-body">
+
+      <!-- Avatar / name -->
+      <div id="profileHero" class="profile-hero"></div>
+
+      <!-- Language card -->
+      <div class="profile-card">
+        <div class="profile-card-title">
+          <i class="fas fa-globe"></i>
+          <span data-i18n="languageSection">Language</span>
+        </div>
+        <div class="lang-toggle">
+          <button class="btn-lang" data-lang="en">
+            <span class="lang-flag">🇺🇸</span>
+            <span data-i18n="langEn">English</span>
+          </button>
+          <button class="btn-lang" data-lang="fr">
+            <span class="lang-flag">🇫🇷</span>
+            <span data-i18n="langFr">Français</span>
+          </button>
+        </div>
+        <div id="langSavedMsg" class="lang-saved-msg d-none">
+          <i class="fas fa-check-circle"></i>
+          <span data-i18n="langSaved">Language saved</span>
+        </div>
+      </div>
+
+      <!-- Password card -->
+      <div class="profile-card">
+        <div class="profile-card-title">
+          <i class="fas fa-shield-halved"></i>
+          <span data-i18n="passwordSection">Change Password</span>
+        </div>
+        <form id="pwdForm" autocomplete="off">
+          <div class="field-group">
+            <div class="field-wrap">
+              <i class="fas fa-lock field-icon"></i>
+              <input type="password" id="currentPwd" class="field-input"
+                data-i18n-placeholder="currentPwdPlaceholder"
+                placeholder="Current password" autocomplete="current-password" />
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-wrap">
+              <i class="fas fa-lock-open field-icon"></i>
+              <input type="password" id="newPwd" class="field-input"
+                data-i18n-placeholder="newPwdPlaceholder"
+                placeholder="New password" autocomplete="new-password" />
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-wrap">
+              <i class="fas fa-lock-open field-icon"></i>
+              <input type="password" id="confirmPwd" class="field-input"
+                data-i18n-placeholder="confirmPwdPlaceholder"
+                placeholder="Confirm new password" autocomplete="new-password" />
+            </div>
+          </div>
+          <div id="pwdMsg" class="pwd-message d-none"></div>
+          <button type="submit" class="btn-sign-in">
+            <span data-i18n="saveChanges">Save changes</span>
+            <i class="fas fa-check"></i>
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
