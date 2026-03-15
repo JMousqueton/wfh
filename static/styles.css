@@ -278,17 +278,18 @@ body::after {
 
 .header-actions { display: flex; align-items: center; gap: 10px; }
 
+.brand-icon { position: relative; }
 .conflict-badge {
-  display: inline-flex; align-items: center; justify-content: center;
+  position: absolute; top: -5px; right: -7px;
+  display: flex; align-items: center; justify-content: center;
   background: #ef4444;
   color: #fff;
-  font-size: 11px; font-weight: 700;
-  min-width: 18px; height: 18px;
-  padding: 0 5px;
+  font-size: 10px; font-weight: 700;
+  min-width: 16px; height: 16px;
+  padding: 0 4px;
   border-radius: 100px;
-  vertical-align: middle;
-  margin-left: 6px;
   line-height: 1;
+  box-shadow: 0 0 0 2px #1a1a2e;
 }
 
 .user-badge {
