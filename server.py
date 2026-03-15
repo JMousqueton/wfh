@@ -579,6 +579,14 @@ def export_ics():
 # ── Static files ──────────────────────────────────────────────────────────────
 _BLOCKED = ('.py', '.db', '.db-wal', '.db-shm', '.env', '.git')
 
+if DEBUG:
+    @app.after_request
+    def no_cache(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma']        = 'no-cache'
+        response.headers['Expires']       = '0'
+        return response
+
 @app.get('/')
 def root():
     return send_from_directory(STATIC_DIR, 'index.html')
