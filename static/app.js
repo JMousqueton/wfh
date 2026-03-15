@@ -542,22 +542,26 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     const email = document.getElementById('emailInput').value.trim();
     const btn   = e.target.querySelector('button[type="submit"]');
+    const el    = document.getElementById('emailMsg');
     btn.disabled = true;
     try {
       const result = await api('PATCH', '/users/me', { email });
       if (!result) return;
       if (result.error) {
-        const el = document.getElementById('emailMsg');
         el.textContent = result.error.includes('Invalid') ? t('emailInvalid') : result.error;
         el.className = 'pwd-message error';
       } else {
         if (_currentUser) _currentUser.email = result.email;
-        const el = document.getElementById('emailMsg');
+        document.getElementById('emailInput').value = result.email ?? '';
         el.textContent = t('emailSuccess');
         el.className = 'pwd-message success';
       }
+    } catch {
+      el.textContent = t('emailInvalid');
+      el.className = 'pwd-message error';
     } finally {
       btn.disabled = false;
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   });
 
