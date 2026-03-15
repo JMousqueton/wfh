@@ -185,8 +185,7 @@ def get_db():
     if 'db' not in g:
         g.db = sqlite3.connect(DB_PATH)
         g.db.row_factory = sqlite3.Row
-        g.db.execute('PRAGMA foreign_keys = ON')
-        g.db.execute('PRAGMA journal_mode = WAL')
+        g.db.execute('PRAGMA foreign_keys = ON')  # must be set per connection
     return g.db
 
 @app.teardown_appcontext
@@ -200,6 +199,7 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute('PRAGMA foreign_keys = ON')
+    conn.execute('PRAGMA journal_mode = WAL')  # persistent DB-level setting, set once
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS users (
             id            TEXT PRIMARY KEY,
