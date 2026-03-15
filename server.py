@@ -23,6 +23,7 @@ load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR   = os.path.join(BASE_DIR, 'static')
 DB_PATH      = os.path.join(BASE_DIR, 'wfh.db')
 SESSION_DAYS = 365
 HOST         = os.environ.get('HOST', '0.0.0.0')
@@ -470,13 +471,13 @@ _BLOCKED = ('.py', '.db', '.db-wal', '.db-shm', '.env', '.git')
 
 @app.get('/')
 def root():
-    return send_from_directory(BASE_DIR, 'index.html')
+    return send_from_directory(STATIC_DIR, 'index.html')
 
 @app.get('/<path:path>')
 def serve_static(path):
     if any(path.endswith(ext) for ext in _BLOCKED) or path.startswith('.'):
         return '', 404
-    return send_from_directory(BASE_DIR, path)
+    return send_from_directory(STATIC_DIR, path)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

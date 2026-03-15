@@ -99,16 +99,18 @@ Emails are only sent if the recipient has set an email address in their profile 
 ```
 WFH/
 ├── server.py             # Flask backend (API + static serving)
-├── app.js                # Frontend logic (i18n, calendar, auth)
-├── index.html            # Single-page app shell
-├── styles.css            # Glassmorphism dark theme
-├── sw.js                 # Service worker (offline cache)
-├── manifest.json         # PWA manifest
-├── icons/                # PWA icons (192px, 512px)
 ├── requirements.txt      # Python dependencies
 ├── .env.example          # Configuration template
 ├── wfh.example.com.conf  # nginx virtual host template
-└── INSTALL.md            # Production deployment guide
+├── INSTALL.md            # Production deployment guide
+└── static/               # Public web assets
+    ├── index.html        # Single-page app shell
+    ├── app.js            # Frontend logic (i18n, calendar, auth)
+    ├── styles.css        # Glassmorphism dark theme
+    ├── sw.js             # Service worker (offline cache)
+    ├── manifest.json     # PWA manifest
+    ├── robots.txt        # Disallow all crawlers
+    └── icons/            # PWA icons (192px, 512px)
 ```
 
 ## Production deployment
