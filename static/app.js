@@ -276,7 +276,9 @@ function weekDays() {
   });
 }
 
-function isoDate(d) { return d.toISOString().split('T')[0]; }
+function isoDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
 function isToday(d) {
   const n = new Date();
