@@ -182,6 +182,29 @@
         </div>
       </div>
 
+      <!-- Email card -->
+      <div class="profile-card">
+        <div class="profile-card-title">
+          <i class="fas fa-envelope"></i>
+          <span data-i18n="emailSection">Email</span>
+        </div>
+        <form id="emailForm" autocomplete="off">
+          <div class="field-group">
+            <div class="field-wrap">
+              <i class="fas fa-at field-icon"></i>
+              <input type="email" id="emailInput" class="field-input"
+                data-i18n-placeholder="emailPlaceholder"
+                placeholder="your@email.com" autocomplete="email" />
+            </div>
+          </div>
+          <div id="emailMsg" class="pwd-message d-none"></div>
+          <button type="submit" class="btn-sign-in">
+            <span data-i18n="saveChanges">Save changes</span>
+            <i class="fas fa-check"></i>
+          </button>
+        </form>
+      </div>
+
       <!-- Password card -->
       <div class="profile-card">
         <div class="profile-card-title">

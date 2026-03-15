@@ -10,6 +10,8 @@ import os
 import sqlite3
 import secrets
 import threading
+import smtplib
+from email.mime.text import MIMEText
 from datetime import datetime, timedelta, timezone, date as date_type
 from functools import wraps
 
@@ -26,10 +28,55 @@ SESSION_DAYS = 365
 HOST         = os.environ.get('HOST', '0.0.0.0')
 PORT         = int(os.environ.get('PORT', 5000))
 DEBUG        = os.environ.get('DEBUG', 'false').lower() == 'true'
+APP_URL      = os.environ.get('APP_URL', f'http://localhost:{os.environ.get("PORT", 5000)}')
+SMTP_HOST    = os.environ.get('SMTP_HOST', '')
+SMTP_PORT    = int(os.environ.get('SMTP_PORT', 587))
+SMTP_USER    = os.environ.get('SMTP_USER', '')
+SMTP_PASS    = os.environ.get('SMTP_PASSWORD', '')
+SMTP_FROM    = os.environ.get('SMTP_FROM', os.environ.get('SMTP_USER', ''))
+
+_MONTHS_FR = ['janvier','février','mars','avril','mai','juin',
+              'juillet','août','septembre','octobre','novembre','décembre']
+_DAYS_FR   = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche']
+
+def _format_date(iso_date, lang):
+    d = date_type.fromisoformat(iso_date)
+    if lang == 'fr':
+        return f"{_DAYS_FR[d.weekday()]} {d.day} {_MONTHS_FR[d.month - 1]} {d.year}"
+    return d.strftime('%A, %B %d, %Y')
+
+def _send_conflict_email(recipient_email, recipient_lang, other_name, cal_date):
+    """Send a WFH conflict notification — runs in a background thread."""
+    if not SMTP_HOST or not recipient_email:
+        return
+    formatted = _format_date(cal_date, recipient_lang)
+    if recipient_lang == 'fr':
+        subject = '[Télétravail] Attention Conflit !'
+        body    = (f"{other_name} sera également en télétravail le {formatted}.\n\n"
+                   f"Lien vers le site : {APP_URL}")
+    else:
+        subject = '[WFH] Attention Conflict!'
+        body    = (f"{other_name} will also work from home on {formatted}.\n\n"
+                   f"Link to the site: {APP_URL}")
+    msg = MIMEText(body, 'plain', 'utf-8')
+    msg['Subject'] = subject
+    msg['From']    = SMTP_FROM
+    msg['To']      = recipient_email
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as smtp:
+            smtp.ehlo()
+            smtp.starttls()
+            if SMTP_USER and SMTP_PASS:
+                smtp.login(SMTP_USER, SMTP_PASS)
+            smtp.send_message(msg)
+        print(f'  Conflict email sent to {recipient_email}')
+    except Exception as e:
+        print(f'  Email error: {e}')
+
 
 def _rand_password():
     """Generate a random 12-character alphanumeric password."""
-    alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#&?!'
     return ''.join(secrets.choice(alphabet) for _ in range(12))
 
 def _seed_users():
@@ -81,7 +128,8 @@ def init_db():
             icon          TEXT NOT NULL,
             color         TEXT NOT NULL,
             color_rgb     TEXT NOT NULL,
-            lang          TEXT NOT NULL DEFAULT 'en'
+            lang          TEXT NOT NULL DEFAULT 'en',
+            email         TEXT
         );
 
         CREATE TABLE IF NOT EXISTS sessions (
@@ -101,12 +149,16 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_calendar_date ON calendar(date);
     """)
 
-    # Live migration: add lang column to existing databases that predate this field
-    try:
-        conn.execute("ALTER TABLE users ADD COLUMN lang TEXT NOT NULL DEFAULT 'en'")
-        conn.commit()
-    except sqlite3.OperationalError:
-        pass  # column already exists – that's fine
+    # Live migrations
+    for migration in [
+        "ALTER TABLE users ADD COLUMN lang  TEXT NOT NULL DEFAULT 'en'",
+        "ALTER TABLE users ADD COLUMN email TEXT",
+    ]:
+        try:
+            conn.execute(migration)
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass  # column already exists
 
     # Seed once if the users table is empty
     if not conn.execute('SELECT 1 FROM users LIMIT 1').fetchone():
@@ -153,6 +205,7 @@ def user_to_dict(row):
         'color':    row['color'],
         'colorRgb': row['color_rgb'],
         'lang':     row['lang'],
+        'email':    row['email'] or '',
     }
 
 def require_auth(f):
@@ -220,9 +273,9 @@ def auth_me():
 # ── API – users ───────────────────────────────────────────────────────────────
 @app.get('/api/users/public')
 def list_users_public():
-    """Return non-sensitive display info (name, icon) — no auth required."""
-    rows = get_db().execute('SELECT name, icon FROM users ORDER BY rowid').fetchall()
-    return jsonify([{'name': r['name'], 'icon': r['icon']} for r in rows])
+    """Return only display names for the login screen — no usernames, IDs, or icons."""
+    rows = get_db().execute('SELECT name FROM users ORDER BY rowid LIMIT 2').fetchall()
+    return jsonify([r['name'] for r in rows])
 
 
 @app.get('/api/users')
@@ -242,6 +295,14 @@ def update_profile():
         return jsonify({'error': 'User not found'}), 404
 
     updates = {}
+
+    # ── Email ────────────────────────────────────────────────────────────────
+    new_email = body.get('email')
+    if new_email is not None:
+        new_email = new_email.strip()
+        if new_email and '@' not in new_email:
+            return jsonify({'error': 'Invalid email address'}), 400
+        updates['email'] = new_email or None
 
     # ── Language ─────────────────────────────────────────────────────────────
     new_lang = body.get('lang')
@@ -321,6 +382,25 @@ def set_status(cal_date, user_id):
             (cal_date, user_id, status)
         )
     db.commit()
+
+    # Notify other users already home on the same day
+    if status == 'home':
+        me = db.execute('SELECT name FROM users WHERE id = ?', (user_id,)).fetchone()
+        others = db.execute(
+            "SELECT u.name, u.email, u.lang FROM calendar c "
+            "JOIN users u ON c.user_id = u.id "
+            "WHERE c.date = ? AND c.user_id != ? AND c.status = 'home'",
+            (cal_date, user_id)
+        ).fetchall()
+        if me and others:
+            for other in others:
+                if other['email']:
+                    threading.Thread(
+                        target=_send_conflict_email,
+                        args=(other['email'], other['lang'], me['name'], cal_date),
+                        daemon=True
+                    ).start()
+
     return jsonify({'date': cal_date, 'user_id': user_id, 'status': status})
 
 

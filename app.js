@@ -43,6 +43,10 @@ const TRANSLATIONS = {
     languageSection:       'Language',
     langEn:                'English',
     langFr:                'French',
+    emailSection:          'Email',
+    emailPlaceholder:      'your@email.com',
+    emailSuccess:          'Email saved ✓',
+    emailInvalid:          'Invalid email address',
     passwordSection:       'Change Password',
     currentPwdPlaceholder: 'Current password',
     newPwdPlaceholder:     'New password',
@@ -96,6 +100,10 @@ const TRANSLATIONS = {
     languageSection:       'Langue',
     langEn:                'Anglais',
     langFr:                'Français',
+    emailSection:          'Email',
+    emailPlaceholder:      'votre@email.com',
+    emailSuccess:          'Email enregistré ✓',
+    emailInvalid:          'Adresse email invalide',
     passwordSection:       'Changer le mot de passe',
     currentPwdPlaceholder: 'Mot de passe actuel',
     newPwdPlaceholder:     'Nouveau mot de passe',
@@ -405,6 +413,8 @@ function showProfile() {
   showView('profileView');
   renderProfileHero();
   applyTranslations();
+  document.getElementById('emailInput').value = currentUser().email ?? '';
+  document.getElementById('emailMsg').className = 'pwd-message d-none';
   document.getElementById('pwdForm').reset();
   document.getElementById('pwdMsg').className = 'pwd-message d-none';
 }
@@ -461,9 +471,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initApp();
 
   // Populate login badge names from public API (no auth needed)
-  fetch('/api/users/public').then(r => r.json()).then(users => {
-    if (users[0]) document.getElementById('loginUser1').textContent = users[0].name;
-    if (users[1]) document.getElementById('loginUser2').textContent = users[1].name;
+  fetch('/api/users/public').then(r => r.json()).then(names => {
+    if (names[0]) document.getElementById('loginUser1').textContent = names[0];
+    if (names[1]) document.getElementById('loginUser2').textContent = names[1];
   }).catch(() => {});
 
 
@@ -523,6 +533,30 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ---- Language buttons ---- */
   document.querySelectorAll('.btn-lang').forEach(btn => {
     btn.addEventListener('click', () => setLang(btn.dataset.lang));
+  });
+
+  /* ---- Email form ---- */
+  document.getElementById('emailForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = document.getElementById('emailInput').value.trim();
+    const btn   = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    try {
+      const result = await api('PATCH', '/users/me', { email });
+      if (!result) return;
+      if (result.error) {
+        const el = document.getElementById('emailMsg');
+        el.textContent = result.error.includes('Invalid') ? t('emailInvalid') : result.error;
+        el.className = 'pwd-message error';
+      } else {
+        if (_currentUser) _currentUser.email = result.email;
+        const el = document.getElementById('emailMsg');
+        el.textContent = t('emailSuccess');
+        el.className = 'pwd-message success';
+      }
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   /* ---- Password form ---- */

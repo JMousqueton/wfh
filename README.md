@@ -60,14 +60,30 @@ All settings live in `.env`:
 | `HOST`          | `0.0.0.0`   | Bind address              |
 | `PORT`          | `8001`      | HTTP port                 |
 | `DEBUG`         | `false`     | Flask debug mode          |
+| `APP_URL`       | *(port)*    | Public URL (used in notification emails) |
 | `USER1_ID`      | `julien`    | Login username for user 1 |
 | `USER1_USERNAME`| `julien`    | Same as ID (can differ)   |
 | `USER1_NAME`    | `Julien`    | Display name              |
 | `USER2_ID`      | `mallorie`  | Login username for user 2 |
 | `USER2_USERNAME`| `mallorie`  | Same as ID (can differ)   |
 | `USER2_NAME`    | `Mallorie`  | Display name              |
+| `SMTP_HOST`     |             | SMTP server (leave empty to disable emails) |
+| `SMTP_PORT`     | `587`       | SMTP port                 |
+| `SMTP_USER`     |             | SMTP login                |
+| `SMTP_PASSWORD` |             | SMTP password             |
+| `SMTP_FROM`     |             | Sender address            |
 
 Passwords are **never stored in `.env`** — they are randomly generated (12 chars) on first startup.
+
+### Email notifications
+
+When both users are working from home on the same day, the user who was already marked as "home" receives an email in their own language:
+
+> **Attention !**
+> Julien sera également en télétravail le lundi 15 mars 2026.
+> Lien vers le site : https://wfh.example.com
+
+Email is only sent if the recipient has set their email address in their profile and `SMTP_HOST` is configured.
 
 ## Project structure
 
