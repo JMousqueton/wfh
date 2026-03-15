@@ -60,6 +60,8 @@ const TRANSLATIONS = {
     back:                  'Back',
     installTitle:          'Install WFH Planner',
     installHint:           'Add to Home Screen',
+    monthlyView:           'Monthly view',
+    weeklyView:            'Weekly view',
   },
   fr: {
     locale:                'fr-FR',
@@ -118,6 +120,8 @@ const TRANSLATIONS = {
     back:                  'Retour',
     installTitle:          'Installer WFH Planner',
     installHint:           'Ajouter à l\'écran d\'accueil',
+    monthlyView:           'Vue mensuelle',
+    weeklyView:            'Vue hebdomadaire',
   },
 };
 
@@ -148,6 +152,7 @@ function applyTranslations() {
   document.querySelectorAll('.btn-lang').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.lang === currentLang);
   });
+  updateViewToggleLabel();
 }
 
 async function setLang(lang, persist = true) {
@@ -178,6 +183,8 @@ let allUsers     = [];
 let _currentUser = null;
 let _calCache    = {};
 let weekOffset   = (() => { const d = new Date().getDay(); return (d === 0 || d === 6) ? 1 : 0; })();
+let viewMode     = 'week';   // 'week' | 'month'
+let monthOffset  = 0;
 
 const DAY_LABELS_FALLBACK = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
 
@@ -229,6 +236,11 @@ async function calFetch(mondayIso) {
   if (data) _calCache = data;
 }
 
+async function calFetchMerge(mondayIso) {
+  const data = await api('GET', `/calendar?monday=${mondayIso}`);
+  if (data) Object.assign(_calCache, data);
+}
+
 function calStatus(date, userId) {
   return _calCache[date]?.[userId] ?? null;
 }
@@ -269,6 +281,28 @@ function isToday(d) {
   return d.getDate()     === n.getDate()  &&
          d.getMonth()    === n.getMonth() &&
          d.getFullYear() === n.getFullYear();
+}
+
+function currentMonthDate() {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + monthOffset);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+// Returns an array of Mondays for every work-week that overlaps the given month
+function getMonthWeeks(year, month) {
+  const firstDay = new Date(year, month, 1);
+  const lastDay  = new Date(year, month + 1, 0);
+  const d        = new Date(mondayOf(firstDay));
+  const weeks    = [];
+  while (d <= lastDay) {
+    const fri = new Date(d); fri.setDate(fri.getDate() + 4);
+    if (fri >= firstDay) weeks.push(new Date(d));
+    d.setDate(d.getDate() + 7);
+  }
+  return weeks;
 }
 
 
@@ -313,9 +347,9 @@ async function renderCalendar() {
 
   // Fetch & render grid
   const grid = document.getElementById('weekGrid');
-  grid.classList.add('loading');
+  grid.className = 'week-grid loading';
   await calFetch(mon);
-  grid.classList.remove('loading');
+  grid.className = 'week-grid';
 
   grid.innerHTML = '';
   days.forEach((day, i) => {
@@ -394,6 +428,114 @@ async function handleToggle(date, userId) {
   if (card) {
     const allHome = allUsers.every(u => calStatus(date, u.id) === 'home');
     card.classList.toggle('all-home', allHome);
+  }
+}
+
+
+// ── Month view ────────────────────────────────────────────────────────────────
+async function renderMonthView() {
+  const me   = currentUser();
+  const base = currentMonthDate();
+  const year = base.getFullYear();
+  const month = base.getMonth();
+
+  // Header label (capitalise first letter for French)
+  const raw   = base.toLocaleDateString(t('locale'), { month: 'long', year: 'numeric' });
+  document.getElementById('weekRange').textContent = raw.charAt(0).toUpperCase() + raw.slice(1);
+
+  const badge = document.getElementById('userBadge');
+  badge.innerHTML = `<i class="fas ${me.icon}"></i><span>${me.name}</span>`;
+  badge.style.color = me.color;
+
+  // Footer legend (same as week view)
+  const legend = document.getElementById('footerLegend');
+  legend.innerHTML = allUsers.map(u => `
+    <div class="legend-item">
+      <i class="fas fa-house" style="color:${u.color}"></i>
+      <span>${t('legendHome')(u.name)}</span>
+    </div>
+    <div class="legend-dot"></div>
+  `).join('') + `
+    <div class="legend-item">
+      <i class="fas fa-plane" style="color:#f59e0b"></i>
+      <span>${t('legendTravel')}</span>
+    </div>
+    <div class="legend-dot"></div>
+    <div class="legend-item">
+      <i class="fas fa-building" style="color:#64748b"></i>
+      <span>${t('legendOffice')}</span>
+    </div>
+  `;
+
+  // Fetch all weeks of the month in parallel
+  const grid  = document.getElementById('weekGrid');
+  grid.className = 'month-grid loading';
+  const weeks = getMonthWeeks(year, month);
+  await Promise.all(weeks.map(mon => calFetchMerge(isoDate(mon))));
+  grid.className = 'month-grid';
+  grid.innerHTML = '';
+
+  // Header row – day labels
+  t('dayLabels').forEach(label => {
+    const h = document.createElement('div');
+    h.className   = 'month-header-cell';
+    h.textContent = label;
+    grid.appendChild(h);
+  });
+
+  // Day cells
+  weeks.forEach(monday => {
+    for (let i = 0; i < 5; i++) {
+      const day     = new Date(monday); day.setDate(day.getDate() + i);
+      const date    = isoDate(day);
+      const inMonth = day.getMonth() === month && day.getFullYear() === year;
+      const today   = isToday(day);
+      const allHome = inMonth && allUsers.length > 0 && allUsers.every(u => calStatus(date, u.id) === 'home');
+
+      const cell = document.createElement('div');
+      cell.className = `month-cell${today ? ' today' : ''}${!inMonth ? ' out-of-month' : ''}${allHome ? ' all-home' : ''}`;
+
+      const usersHtml = inMonth ? allUsers.map(u => {
+        const { cls, icon } = statusDisplay(calStatus(date, u.id));
+        return `<span class="month-dot ${cls}" style="--u-color:${u.color};--u-rgb:${u.colorRgb}"><i class="fas ${icon}"></i></span>`;
+      }).join('') : '';
+
+      cell.innerHTML = `
+        <div class="month-cell-date">${day.getDate()}</div>
+        <div class="month-cell-users">${usersHtml}</div>
+      `;
+
+      if (inMonth) cell.addEventListener('click', () => handleMonthToggle(cell, date, me.id));
+      grid.appendChild(cell);
+    }
+  });
+}
+
+async function handleMonthToggle(cell, date, userId) {
+  await calToggle(date, userId);
+  cell.querySelector('.month-cell-users').innerHTML = allUsers.map(u => {
+    const { cls, icon } = statusDisplay(calStatus(date, u.id));
+    return `<span class="month-dot ${cls}" style="--u-color:${u.color};--u-rgb:${u.colorRgb}"><i class="fas ${icon}"></i></span>`;
+  }).join('');
+  cell.classList.toggle('all-home', allUsers.every(u => calStatus(date, u.id) === 'home'));
+}
+
+function updateViewToggleLabel() {
+  const el = document.getElementById('viewToggleLabel');
+  if (el) el.textContent = viewMode === 'week' ? t('monthlyView') : t('weeklyView');
+}
+
+function toggleView() {
+  viewMode = viewMode === 'week' ? 'month' : 'week';
+  updateViewToggleLabel();
+  if (viewMode === 'month') {
+    // Sync to the month containing the currently viewed week
+    const now = new Date();
+    const w   = weekDays()[0];
+    monthOffset = (w.getFullYear() - now.getFullYear()) * 12 + (w.getMonth() - now.getMonth());
+    renderMonthView();
+  } else {
+    renderCalendar();
   }
 }
 
@@ -602,6 +744,8 @@ document.addEventListener('DOMContentLoaded', () => {
     allUsers     = [];
     _calCache    = {};
     currentLang  = 'en';
+    viewMode     = 'week';
+    monthOffset  = 0;
     const dow    = new Date().getDay();
     weekOffset   = (dow === 0 || dow === 6) ? 1 : 0;
     applyTranslations();
@@ -612,14 +756,26 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('#togglePassword i').className = 'fas fa-eye';
   });
 
-  /* ---- Week navigation ---- */
-  document.getElementById('prevWeek').addEventListener('click', () => { weekOffset--; renderCalendar(); });
-  document.getElementById('nextWeek').addEventListener('click', () => { weekOffset++; renderCalendar(); });
-  document.getElementById('todayBtn').addEventListener('click', () => {
-    const dow  = new Date().getDay();
-    weekOffset = (dow === 0 || dow === 6) ? 1 : 0;
-    renderCalendar();
+  /* ---- Week / Month navigation ---- */
+  document.getElementById('prevWeek').addEventListener('click', () => {
+    if (viewMode === 'month') { monthOffset--; renderMonthView(); }
+    else { weekOffset--; renderCalendar(); }
   });
+  document.getElementById('nextWeek').addEventListener('click', () => {
+    if (viewMode === 'month') { monthOffset++; renderMonthView(); }
+    else { weekOffset++; renderCalendar(); }
+  });
+  document.getElementById('todayBtn').addEventListener('click', () => {
+    if (viewMode === 'month') { monthOffset = 0; renderMonthView(); }
+    else {
+      const dow  = new Date().getDay();
+      weekOffset = (dow === 0 || dow === 6) ? 1 : 0;
+      renderCalendar();
+    }
+  });
+
+  /* ---- View toggle (desktop) ---- */
+  document.getElementById('viewToggleBtn').addEventListener('click', toggleView);
 
   /* ---- ICS export ---- */
   document.getElementById('exportIcsBtn').addEventListener('click', async () => {

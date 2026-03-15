@@ -308,6 +308,11 @@ body::after {
   border-color: rgba(239,68,68,0.28);
 }
 
+/* ---- View toggle (desktop only) ---- */
+.btn-view-toggle {
+  display: none;
+}
+
 /* ---- Week nav bar ---- */
 .week-nav-bar {
   display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -681,8 +686,79 @@ body::after {
 
 
 /* ============================================================
+   Monthly view
+   ============================================================ */
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.month-grid.loading { opacity: 0.35; pointer-events: none; }
+
+.month-header-cell {
+  text-align: center;
+  font-size: 11px; font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 6px 4px 10px;
+}
+
+.month-cell {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 6px;
+  min-height: 62px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  animation: cardIn 0.3s ease both;
+}
+.month-cell:hover { background: var(--glass-bg-hover); border-color: var(--glass-border-hover); transform: scale(1.03); }
+.month-cell:active { transform: scale(0.97); }
+.month-cell.today { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.06); }
+.month-cell.out-of-month { opacity: 0.2; cursor: default; pointer-events: none; background: transparent; border-color: transparent; }
+.month-cell.all-home { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); }
+
+.month-cell-date {
+  font-size: 13px; font-weight: 600; color: var(--text-primary); line-height: 1;
+}
+.month-cell.today .month-cell-date {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--text-primary); color: var(--bg-dark);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+}
+
+.month-cell-users { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; }
+
+.month-dot {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 9px;
+}
+.month-dot.is-home       { color: var(--u-color); background: rgba(var(--u-rgb), 0.18); }
+.month-dot.is-travelling { color: #f59e0b; background: rgba(245,158,11,0.15); }
+.month-dot.is-office     { color: var(--text-secondary); background: rgba(255,255,255,0.06); }
+
+
+/* ============================================================
    Responsive
    ============================================================ */
+@media (min-width: 769px) {
+  .btn-view-toggle {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    background: var(--glass-bg); border: 1px solid var(--glass-border);
+    border-radius: 15px;
+    color: var(--text-primary); font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-view-toggle:hover { background: var(--glass-bg-hover); border-color: var(--glass-border-hover); transform: scale(1.02); }
+}
+
 @media (max-width: 768px) {
   .app-header { padding: 12px 16px; }
   .brand-week  { display: none; }
