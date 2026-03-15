@@ -11,6 +11,7 @@ import sqlite3
 import secrets
 import threading
 import smtplib
+import time
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta, timezone, date as date_type
 from functools import wraps
@@ -37,6 +38,23 @@ SMTP_PASS         = os.environ.get('SMTP_PASSWORD', '')
 SMTP_FROM         = os.environ.get('SMTP_FROM', os.environ.get('SMTP_USER', ''))
 EMAIL_DELAY       = int(os.environ.get('EMAIL_DELAY', 900))   # seconds, default 15 min
 FRENCH_DAY_OFF    = os.environ.get('FRENCHDAYOFF', 'false').lower() == 'true'
+
+# ── Login rate limiting: max 5 attempts per IP per 60 s ──────────────────────
+_login_attempts  = {}   # {ip: [timestamp, ...]}
+_login_rate_lock = threading.Lock()
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_WINDOW       = 60  # seconds
+
+def _check_login_rate(ip):
+    now = time.time()
+    with _login_rate_lock:
+        attempts = [t for t in _login_attempts.get(ip, []) if now - t < LOGIN_WINDOW]
+        if len(attempts) >= MAX_LOGIN_ATTEMPTS:
+            return False
+        attempts.append(now)
+        _login_attempts[ip] = attempts
+        return True
+
 
 # ── Email queue: key=(cal_date, recipient_user_id) → threading.Timer ──────────
 _email_queue      = {}
@@ -323,6 +341,9 @@ def require_auth(f):
 # ── API – authentication ──────────────────────────────────────────────────────
 @app.post('/api/auth/login')
 def auth_login():
+    if not _check_login_rate(request.remote_addr):
+        return jsonify({'error': 'Too many login attempts. Please wait a minute.'}), 429
+
     body     = request.get_json(silent=True) or {}
     username = (body.get('username') or '').strip().lower()
     password =  body.get('password') or ''
@@ -408,8 +429,8 @@ def update_profile():
             return jsonify({'error': 'currentPassword is required'}), 400
         if not check_password_hash(row['password_hash'], current_pwd):
             return jsonify({'error': 'Current password is incorrect'}), 403
-        if len(new_pwd) < 4:
-            return jsonify({'error': 'New password must be at least 4 characters'}), 400
+        if len(new_pwd) < 12:
+            return jsonify({'error': 'New password must be at least 12 characters'}), 400
         updates['password_hash'] = generate_password_hash(new_pwd)
 
     if not updates:
@@ -602,6 +623,34 @@ def export_ics():
 
 # ── Static files ──────────────────────────────────────────────────────────────
 _BLOCKED = ('.py', '.db', '.db-wal', '.db-shm', '.env', '.git')
+
+@app.after_request
+def security_headers(response):
+    # Prevent clickjacking
+    response.headers['X-Frame-Options']         = 'DENY'
+    # Prevent MIME-type sniffing
+    response.headers['X-Content-Type-Options']  = 'nosniff'
+    # Limit referrer info leakage
+    response.headers['Referrer-Policy']         = 'strict-origin-when-cross-origin'
+    # Restrict to same origin (no cross-origin embedding)
+    response.headers['Cross-Origin-Opener-Policy']   = 'same-origin'
+    response.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
+    # Content Security Policy — locks down script/style sources
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com fonts.googleapis.com; "
+        "font-src 'self' cdnjs.cloudflare.com fonts.gstatic.com; "
+        "img-src 'self' data:; "
+        "connect-src 'self'; "
+        "worker-src 'self'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self';"
+    )
+    # HSTS only over HTTPS (not in dev)
+    if not DEBUG:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
 
 if DEBUG:
     @app.after_request

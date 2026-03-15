@@ -14,6 +14,7 @@ const TRANSLATIONS = {
     passwordPlaceholder:   'Password',
     signIn:                'Sign In',
     loginError:            'Invalid username or password',
+    loginRateLimit:        'Too many attempts. Please wait a minute.',
     // Header / nav
     today:                 'Today',
     logout:                'Logout',
@@ -74,6 +75,7 @@ const TRANSLATIONS = {
     passwordPlaceholder:   'Mot de passe',
     signIn:                'Se connecter',
     loginError:            "Nom d'utilisateur ou mot de passe incorrect",
+    loginRateLimit:        'Trop de tentatives. Veuillez attendre une minute.',
     // Header / nav
     today:                 "Aujourd'hui",
     logout:                'Déconnexion',
@@ -752,6 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
         body:    JSON.stringify({ username, password }),
       });
       const data = await res.json();
+      if (res.status === 429) throw new Error('rateLimit');
       if (!res.ok) throw new Error(data.error);
 
       localStorage.setItem(TOKEN_KEY, data.token);
@@ -764,8 +767,10 @@ document.addEventListener('DOMContentLoaded', () => {
       renderCalendar();
       refreshConflictBadge();
       maybeShowIosBanner();
-    } catch {
-      document.getElementById('loginError').classList.remove('d-none');
+    } catch (err) {
+      const el = document.getElementById('loginError');
+      el.querySelector('span').textContent = err?.message === 'rateLimit' ? t('loginRateLimit') : t('loginError');
+      el.classList.remove('d-none');
       const card = document.getElementById('loginCard');
       card.classList.remove('shake');
       void card.offsetWidth;
