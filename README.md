@@ -9,13 +9,16 @@ A beautiful Progressive Web App (PWA) for tracking Work From Home days for two u
 ## Features
 
 - **Week calendar** — Mon–Fri view, navigate week by week
+- **Monthly calendar** — full-month overview, toggleable from the header (desktop)
 - **Three statuses** per day: At office · At home · Travelling ✈️
 - **Two users** — man (blue) and woman (pink), each with their own color theme
+- **French public holidays** — auto-fetched from [data.gouv.fr](https://calendrier.api.gouv.fr) on startup, greyed out as "Férié / Day Off" (`FRENCHDAYOFF=true`)
 - **Multi-device sync** — SQLite backend via Flask REST API
 - **1-year sessions** — stay logged in across all devices
 - **Profile page** — change email, language and password
 - **French / English** — per-user language preference
 - **Conflict notifications** — email alert when both users work from home the same day
+- **ICS export** — download the other user's week as a calendar file
 - **PWA** — installable on iOS and Android, works offline
 - **iOS safe area** — supports Dynamic Island and home bar
 
@@ -24,7 +27,7 @@ A beautiful Progressive Web App (PWA) for tracking Work From Home days for two u
 | Layer    | Technology |
 |----------|-----------|
 | Backend  | Python / Flask / SQLite |
-| Frontend | Vanilla JS / Bootstrap 5 / Font Awesome 6 |
+| Frontend | Vanilla JS / Bootstrap 5 / Font Awesome 7 |
 | Auth     | Bearer token (secrets.token_hex, 1-year expiry) |
 | PWA      | Service Worker, Web App Manifest |
 
@@ -69,6 +72,7 @@ All settings live in `.env`:
 | `USER2_ID`      | `mallorie`  | Login username for user 2                |
 | `USER2_USERNAME`| `mallorie`  | Same as ID (can differ)                  |
 | `USER2_NAME`    | `Mallorie`  | Display name                             |
+| `FRENCHDAYOFF`  | `false`     | Fetch French public holidays from data.gouv.fr and display as "Férié" |
 | `EMAIL_DELAY`   | `900`       | Seconds to wait before sending a conflict email (default 15 min) |
 | `SMTP_HOST`     |             | SMTP server — leave empty to disable emails |
 | `SMTP_PORT`     | `587`       | SMTP port                                |
