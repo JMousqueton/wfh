@@ -4,13 +4,14 @@ A beautiful Progressive Web App (PWA) for tracking Work From Home days for two u
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue) ![Flask](https://img.shields.io/badge/Flask-3.0+-green) ![PWA](https://img.shields.io/badge/PWA-ready-purple)
 
+![Screenshot](.github/screenshot.png)
+
 ## Features
 
 - **Week calendar** — Mon–Fri view, navigate week by week
 - **Three statuses** per day: At office · At home · Travelling ✈️
 - **Two users** — man (blue) and woman (pink), each with their own color theme
 - **Multi-device sync** — SQLite backend via Flask REST API
-- **1-year sessions** — stay logged in across devices
 - **Profile page** — change language and password
 - **French / English** — per-user language preference
 - **PWA** — installable on iOS and Android, works offline
@@ -22,7 +23,7 @@ A beautiful Progressive Web App (PWA) for tracking Work From Home days for two u
 |----------|-----------|
 | Backend  | Python / Flask / SQLite |
 | Frontend | Vanilla JS / Bootstrap 5 / Font Awesome 6 |
-| Auth     | Bearer token (secrets.token_hex, 1-year expiry) |
+| Auth     | Bearer token (secrets.token_hex) |
 | PWA      | Service Worker, Web App Manifest |
 
 ## Quick start
