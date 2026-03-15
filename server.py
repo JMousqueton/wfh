@@ -436,6 +436,17 @@ def conflict_count():
     return jsonify({'count': row['cnt']})
 
 
+@app.get('/api/conflicts')
+@require_auth
+def get_conflicts():
+    rows = get_db().execute('''
+        SELECT date FROM calendar WHERE status = "home"
+        GROUP BY date HAVING COUNT(DISTINCT user_id) >= 2
+        ORDER BY date
+    ''').fetchall()
+    return jsonify([r['date'] for r in rows])
+
+
 # ── API – calendar ────────────────────────────────────────────────────────────
 @app.get('/api/calendar')
 @require_auth

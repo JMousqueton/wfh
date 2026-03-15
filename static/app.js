@@ -63,6 +63,8 @@ const TRANSLATIONS = {
     monthlyView:           'Monthly view',
     weeklyView:            'Weekly view',
     dayOff:                'Day Off',
+    conflictListTitle:     'Conflict days',
+    noConflicts:           'No conflict days',
   },
   fr: {
     locale:                'fr-FR',
@@ -124,6 +126,8 @@ const TRANSLATIONS = {
     monthlyView:           'Vue mensuelle',
     weeklyView:            'Vue hebdomadaire',
     dayOff:                'Férié',
+    conflictListTitle:     'Jours en conflit',
+    noConflicts:           'Aucun jour en conflit',
   },
 };
 
@@ -644,6 +648,53 @@ function maybeShowIosBanner() {
 }
 
 
+// ── Conflict list view ────────────────────────────────────────────────────────
+function updateNavBar() {
+  const conflicts = viewMode === 'conflicts';
+  document.getElementById('prevWeek').classList.toggle('d-none', conflicts);
+  document.getElementById('nextWeek').classList.toggle('d-none', conflicts);
+  document.getElementById('exportIcsBtn').classList.toggle('d-none', conflicts);
+  document.getElementById('viewToggleBtn').classList.toggle('d-none', conflicts);
+}
+
+async function renderConflictList() {
+  document.getElementById('weekRange').textContent = t('conflictListTitle');
+  const grid = document.getElementById('weekGrid');
+  grid.className = 'conflict-list loading';
+  const dates = await api('GET', '/conflicts');
+  grid.className = 'conflict-list';
+  grid.innerHTML = '';
+
+  if (!dates || dates.length === 0) {
+    grid.innerHTML = `<div class="conflict-empty"><i class="fas fa-circle-check"></i><span>${t('noConflicts')}</span></div>`;
+    return;
+  }
+
+  dates.forEach(dateStr => {
+    const d    = new Date(dateStr + 'T12:00:00');
+    const label = d.toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const item = document.createElement('div');
+    item.className = 'conflict-item';
+    item.innerHTML = `
+      <div class="conflict-item-icons">
+        ${allUsers.map(u => `<i class="fas ${u.icon}" style="color:${u.color}"></i>`).join('')}
+      </div>
+      <span class="conflict-item-date">${label}</span>
+      <i class="fas fa-chevron-right conflict-item-arrow"></i>
+    `;
+    item.addEventListener('click', () => {
+      const todayMonday  = mondayOf(new Date());
+      const targetMonday = mondayOf(d);
+      weekOffset = Math.round((targetMonday - todayMonday) / (7 * 24 * 60 * 60 * 1000));
+      viewMode = 'week';
+      updateNavBar();
+      renderCalendar();
+    });
+    grid.appendChild(item);
+  });
+}
+
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 async function initApp() {
   applyTranslations();   // apply default lang before any view is shown
@@ -818,12 +869,21 @@ document.addEventListener('DOMContentLoaded', () => {
     else { weekOffset++; renderCalendar(); }
   });
   document.getElementById('todayBtn').addEventListener('click', () => {
+    const dow = new Date().getDay();
     if (viewMode === 'month') { monthOffset = 0; renderMonthView(); }
     else {
-      const dow  = new Date().getDay();
       weekOffset = (dow === 0 || dow === 6) ? 1 : 0;
+      viewMode = 'week';
+      updateNavBar();
       renderCalendar();
     }
+  });
+
+  document.getElementById('conflictBadge').addEventListener('click', e => {
+    e.stopPropagation();
+    viewMode = 'conflicts';
+    updateNavBar();
+    renderConflictList();
   });
 
   /* ---- View toggle (desktop) ---- */
