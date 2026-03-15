@@ -323,12 +323,11 @@ def user_to_dict(row):
 def require_auth(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        auth = request.headers.get('Authorization', '')
-        if not auth.startswith('Bearer '):
+        token = request.cookies.get('wfh_session')
+        if not token:
             return jsonify({'error': 'Unauthorized'}), 401
-        token = auth[7:]
-        db    = get_db()
-        row   = db.execute(
+        db  = get_db()
+        row = db.execute(
             'SELECT user_id, expires_at FROM sessions WHERE token = ?', (token,)
         ).fetchone()
         if not row:
@@ -370,7 +369,16 @@ def auth_login():
         (token, row['id'], expires_at)
     )
     db.commit()
-    return jsonify({'token': token, 'user': user_to_dict(row)})
+    resp = jsonify({'user': user_to_dict(row)})
+    resp.set_cookie(
+        'wfh_session', token,
+        max_age=SESSION_DAYS * 86400,
+        httponly=True,
+        secure=not DEBUG,
+        samesite='Strict',
+        path='/',
+    )
+    return resp
 
 
 @app.post('/api/auth/logout')
@@ -379,7 +387,9 @@ def auth_logout():
     db = get_db()
     db.execute('DELETE FROM sessions WHERE token = ?', (g.token,))
     db.commit()
-    return jsonify({'ok': True})
+    resp = jsonify({'ok': True})
+    resp.delete_cookie('wfh_session', path='/')
+    return resp
 
 
 @app.get('/api/auth/me')

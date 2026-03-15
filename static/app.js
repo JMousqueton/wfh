@@ -186,7 +186,6 @@ async function setLang(lang, persist = true) {
 
 
 // ── State ─────────────────────────────────────────────────────────────────────
-const TOKEN_KEY  = 'wfh_token';
 let allUsers     = [];
 let _currentUser = null;
 let _calCache    = {};
@@ -199,13 +198,10 @@ const DAY_LABELS_FALLBACK = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
 
 // ── API helper ────────────────────────────────────────────────────────────────
 async function api(method, path, body = undefined) {
-  const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch('/api' + path, {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-    },
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
   if (res.status === 401) { _expireSession(); return null; }
@@ -213,7 +209,6 @@ async function api(method, path, body = undefined) {
 }
 
 function _expireSession() {
-  localStorage.removeItem(TOKEN_KEY);
   _currentUser = null;
   allUsers     = [];
   _calCache    = {};
@@ -225,7 +220,6 @@ function _expireSession() {
 function currentUser() { return _currentUser; }
 
 async function authRestore() {
-  if (!localStorage.getItem(TOKEN_KEY)) return false;
   const user = await api('GET', '/auth/me');
   if (!user) return false;
   _currentUser = user;
@@ -757,7 +751,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (res.status === 429) throw new Error('rateLimit');
       if (!res.ok) throw new Error(data.error);
 
-      localStorage.setItem(TOKEN_KEY, data.token);
       _currentUser = data.user;
       currentLang  = data.user.lang ?? 'en';
       applyTranslations();
@@ -861,7 +854,6 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ---- Logout ---- */
   document.getElementById('logoutBtn').addEventListener('click', async () => {
     try { await api('POST', '/auth/logout'); } catch { /* ignore */ }
-    localStorage.removeItem(TOKEN_KEY);
     _currentUser = null;
     allUsers     = [];
     _calCache    = {};
@@ -911,9 +903,8 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ---- ICS export ---- */
   document.getElementById('exportIcsBtn').addEventListener('click', async () => {
     const monday = isoDate(weekDays()[0]);
-    const token  = localStorage.getItem(TOKEN_KEY);
     const res    = await fetch(`/api/calendar/export.ics?monday=${monday}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+      credentials: 'same-origin',
     });
     if (!res.ok) return;
     const blob = await res.blob();
