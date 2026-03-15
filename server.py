@@ -673,7 +673,7 @@ def _assets_version():
     """Return an 8-char hash derived from the mtime of key static assets.
     Changes automatically whenever any asset file is saved."""
     h = hashlib.md5()
-    for fname in ('index.html', 'app.js', 'styles.css', 'manifest.json'):
+    for fname in ('index.html', 'app.js', 'styles.css', 'manifest.json', 'favicon.svg'):
         try:
             h.update(str(os.path.getmtime(os.path.join(STATIC_DIR, fname))).encode())
         except OSError:

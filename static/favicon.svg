@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="50%" style="stop-color:#a855f7"/>
+      <stop offset="100%" style="stop-color:#ec4899"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.22"/>
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <!-- Shine overlay (matches ::after on logo-icon-wrap) -->
+  <rect width="64" height="64" rx="14" fill="url(#shine)"/>
+
+  <!-- House body -->
+  <rect x="18" y="34" width="28" height="20" rx="2" fill="white" opacity="0.95"/>
+
+  <!-- Roof -->
+  <polygon points="11,35 32,13 53,35" fill="white"/>
+
+  <!-- Door -->
+  <rect x="26" y="42" width="12" height="12" rx="2" fill="#a855f7"/>
+
+  <!-- Chimney -->
+  <rect x="39" y="17" width="5" height="11" rx="1" fill="white"/>
+
+</svg>
