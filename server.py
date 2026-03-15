@@ -423,6 +423,19 @@ def update_profile():
     return jsonify(user_to_dict(updated))
 
 
+# ── API – conflict count ──────────────────────────────────────────────────────
+@app.get('/api/conflicts/count')
+@require_auth
+def conflict_count():
+    row = get_db().execute('''
+        SELECT COUNT(*) AS cnt FROM (
+            SELECT date FROM calendar WHERE status = "home"
+            GROUP BY date HAVING COUNT(DISTINCT user_id) >= 2
+        )
+    ''').fetchone()
+    return jsonify({'count': row['cnt']})
+
+
 # ── API – calendar ────────────────────────────────────────────────────────────
 @app.get('/api/calendar')
 @require_auth

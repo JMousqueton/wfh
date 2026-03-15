@@ -232,6 +232,20 @@ async function fetchAllUsers() {
 }
 
 
+// ── Conflict badge ────────────────────────────────────────────────────────────
+async function refreshConflictBadge() {
+  const data = await api('GET', '/conflicts/count');
+  const el   = document.getElementById('conflictBadge');
+  if (!el) return;
+  if (data && data.count > 0) {
+    el.textContent = data.count;
+    el.classList.remove('d-none');
+  } else {
+    el.classList.add('d-none');
+  }
+}
+
+
 // ── Calendar data ─────────────────────────────────────────────────────────────
 async function calFetch(mondayIso) {
   const data = await api('GET', `/calendar?monday=${mondayIso}`);
@@ -440,6 +454,7 @@ async function handleToggle(date, userId) {
   row.classList.add(cls);
   row.querySelector('.status-label').innerHTML = `<i class="fas ${icon}"></i><span>${label}</span>`;
   await calToggle(date, userId);
+  refreshConflictBadge();
   // Update all-home highlight on the day card
   const card = row.closest('.day-card');
   if (card) {
@@ -530,6 +545,7 @@ async function handleMonthToggle(cell, date, userId) {
   await calToggle(date, userId);
   cell.querySelector('.month-cell-users').innerHTML = buildMonthUsersHtml(date);
   cell.classList.toggle('all-home', allUsers.every(u => calStatus(date, u.id) === 'home'));
+  refreshConflictBadge();
 }
 
 function buildMonthUsersHtml(date) {
@@ -640,6 +656,7 @@ async function initApp() {
   await fetchAllUsers();
   showView('appView');
   renderCalendar();
+  refreshConflictBadge();
   maybeShowIosBanner();
 }
 
@@ -680,6 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('loginError').classList.add('d-none');
       showView('appView');
       renderCalendar();
+      refreshConflictBadge();
       maybeShowIosBanner();
     } catch {
       document.getElementById('loginError').classList.remove('d-none');
