@@ -1,7 +1,7 @@
 /* ============================================================
    WFH Planner – Service Worker  (offline shell cache)
    ============================================================ */
-const CACHE  = 'wfh-v22';    // bump this version when static assets change
+const CACHE  = 'wfh-AUTO';   // replaced at serve-time by Flask (_assets_version)
 const ASSETS = [
   './',
   './index.html',

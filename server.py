@@ -7,6 +7,8 @@ Or:    PORT=8080 python server.py
 """
 
 import os
+import re
+import hashlib
 import sqlite3
 import secrets
 import threading
@@ -173,6 +175,9 @@ def _seed_users():
     ]
 
 app = Flask(__name__, static_folder=None)
+
+# Dummy hash used in login to prevent timing-based username enumeration
+_DUMMY_HASH = generate_password_hash('__dummy_constant__')
 
 # ── Database ──────────────────────────────────────────────────────────────────
 def get_db():
@@ -351,7 +356,10 @@ def auth_login():
     db  = get_db()
     row = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
 
-    if not row or not check_password_hash(row['password_hash'], password):
+    # Always call check_password_hash to prevent timing-based username enumeration
+    hash_to_check = row['password_hash'] if row else _DUMMY_HASH
+    password_ok   = check_password_hash(hash_to_check, password)
+    if not row or not password_ok:
         return jsonify({'error': 'Invalid username or password'}), 401
 
     token      = secrets.token_hex(32)
@@ -659,6 +667,33 @@ if DEBUG:
         response.headers['Pragma']        = 'no-cache'
         response.headers['Expires']       = '0'
         return response
+
+def _assets_version():
+    """Return an 8-char hash derived from the mtime of key static assets.
+    Changes automatically whenever any asset file is saved."""
+    h = hashlib.md5()
+    for fname in ('index.html', 'app.js', 'styles.css', 'manifest.json'):
+        try:
+            h.update(str(os.path.getmtime(os.path.join(STATIC_DIR, fname))).encode())
+        except OSError:
+            pass
+    return h.hexdigest()[:8]
+
+
+@app.get('/sw.js')
+def serve_sw():
+    """Serve sw.js with the cache version auto-injected from asset mtimes."""
+    sw_path = os.path.join(STATIC_DIR, 'sw.js')
+    with open(sw_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    content = re.sub(r"const CACHE\s*=\s*'wfh-[^']*'",
+                     f"const CACHE = 'wfh-{_assets_version()}'", content)
+    headers = {
+        'Content-Type':  'application/javascript',
+        'Cache-Control': 'no-cache',   # browser must always re-fetch sw.js
+    }
+    return content, 200, headers
+
 
 @app.get('/')
 def root():
