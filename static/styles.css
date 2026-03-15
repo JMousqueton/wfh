@@ -731,15 +731,22 @@ body::after {
   font-size: 11px;
 }
 
-.month-cell-users { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; }
-
-.month-dot {
-  width: 20px; height: 20px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; font-size: 9px;
+.month-cell-users {
+  display: flex; align-items: center; gap: 5px; justify-content: center;
 }
-.month-dot.is-home       { color: var(--u-color); background: rgba(var(--u-rgb), 0.18); }
-.month-dot.is-travelling { color: #f59e0b; background: rgba(245,158,11,0.15); }
-.month-dot.is-office     { color: var(--text-secondary); background: rgba(255,255,255,0.06); }
+
+.month-user-pair {
+  display: flex; align-items: center; gap: 3px;
+  font-size: 12px;
+}
+.month-user-pair i:first-child { font-size: 13px; }
+.month-user-pair i:last-child  { font-size: 11px; }
+
+.month-users-sep {
+  color: rgba(255,255,255,0.2);
+  font-size: 10px;
+  font-style: normal;
+}
 
 
 /* ============================================================

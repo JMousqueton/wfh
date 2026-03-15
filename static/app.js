@@ -495,10 +495,7 @@ async function renderMonthView() {
       const cell = document.createElement('div');
       cell.className = `month-cell${today ? ' today' : ''}${!inMonth ? ' out-of-month' : ''}${allHome ? ' all-home' : ''}`;
 
-      const usersHtml = inMonth ? allUsers.map(u => {
-        const { cls, icon } = statusDisplay(calStatus(date, u.id));
-        return `<span class="month-dot ${cls}" style="--u-color:${u.color};--u-rgb:${u.colorRgb}"><i class="fas ${icon}"></i></span>`;
-      }).join('') : '';
+      const usersHtml = inMonth ? buildMonthUsersHtml(date) : '';
 
       cell.innerHTML = `
         <div class="month-cell-date">${day.getDate()}</div>
@@ -513,11 +510,23 @@ async function renderMonthView() {
 
 async function handleMonthToggle(cell, date, userId) {
   await calToggle(date, userId);
-  cell.querySelector('.month-cell-users').innerHTML = allUsers.map(u => {
-    const { cls, icon } = statusDisplay(calStatus(date, u.id));
-    return `<span class="month-dot ${cls}" style="--u-color:${u.color};--u-rgb:${u.colorRgb}"><i class="fas ${icon}"></i></span>`;
-  }).join('');
+  cell.querySelector('.month-cell-users').innerHTML = buildMonthUsersHtml(date);
   cell.classList.toggle('all-home', allUsers.every(u => calStatus(date, u.id) === 'home'));
+}
+
+function buildMonthUsersHtml(date) {
+  return allUsers.map((u, i) => {
+    const st = calStatus(date, u.id);
+    const { icon: sIcon } = statusDisplay(st);
+    const sColor = st === 'travelling' ? '#f59e0b'
+                 : st === 'home'       ? u.color
+                 : 'rgba(255,255,255,0.3)';
+    const sep = (i < allUsers.length - 1) ? '<span class="month-users-sep">|</span>' : '';
+    return `<span class="month-user-pair">
+      <i class="fas ${u.icon}" style="color:${u.color}"></i>
+      <i class="fas ${sIcon}" style="color:${sColor}"></i>
+    </span>${sep}`;
+  }).join('');
 }
 
 function updateViewToggleLabel() {
