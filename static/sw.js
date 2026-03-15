@@ -1,7 +1,7 @@
 /* ============================================================
    WFH Planner – Service Worker  (offline shell cache)
    ============================================================ */
-const CACHE  = 'wfh-v20';    // bump this version when static assets change
+const CACHE  = 'wfh-v21';    // bump this version when static assets change
 const ASSETS = [
   './',
   './index.html',

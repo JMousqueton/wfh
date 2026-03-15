@@ -294,6 +294,16 @@ function weekDays() {
   });
 }
 
+/** Escape user-controlled strings before injecting into innerHTML */
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function isoDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
@@ -347,15 +357,15 @@ async function renderCalendar() {
   // Header
   document.getElementById('weekRange').textContent = t('weekRange')(days);
   const badge = document.getElementById('userBadge');
-  badge.innerHTML = `<i class="fas ${me.icon}"></i><span>${me.name}</span>`;
+  badge.innerHTML = `<i class="fas ${esc(me.icon)}"></i><span>${esc(me.name)}</span>`;
   badge.style.color = me.color;
 
   // Footer legend (dynamic, uses translated user names)
   const legend = document.getElementById('footerLegend');
   legend.innerHTML = allUsers.map(u => `
     <div class="legend-item">
-      <i class="fas fa-house" style="color:${u.color}"></i>
-      <span>${t('legendHome')(u.name)}</span>
+      <i class="fas fa-house" style="color:${esc(u.color)}"></i>
+      <span>${esc(t('legendHome')(u.name))}</span>
     </div>
     <div class="legend-dot"></div>
   `).join('') + `
@@ -430,12 +440,12 @@ function buildStatusRow(user, date, isMine) {
 
   return `
     <div class="status-row ${isMine ? 'mine' : 'other'} ${cls}"
-         data-user="${user.id}" data-date="${date}"
-         style="--u-color:${user.color}; --u-rgb:${user.colorRgb};"
+         data-user="${esc(user.id)}" data-date="${esc(date)}"
+         style="--u-color:${esc(user.color)}; --u-rgb:${esc(user.colorRgb)};"
          ${isMine ? 'role="button" tabindex="0"' : ''}>
-      <div class="status-avatar"><i class="fas ${user.icon}"></i></div>
+      <div class="status-avatar"><i class="fas ${esc(user.icon)}"></i></div>
       <div class="status-info">
-        <span class="status-name">${user.name}</span>
+        <span class="status-name">${esc(user.name)}</span>
         <span class="status-label">
           <i class="fas ${icon}"></i>
           <span>${label}</span>
@@ -480,15 +490,15 @@ async function renderMonthView() {
   document.getElementById('weekRange').textContent = raw.charAt(0).toUpperCase() + raw.slice(1);
 
   const badge = document.getElementById('userBadge');
-  badge.innerHTML = `<i class="fas ${me.icon}"></i><span>${me.name}</span>`;
+  badge.innerHTML = `<i class="fas ${esc(me.icon)}"></i><span>${esc(me.name)}</span>`;
   badge.style.color = me.color;
 
   // Footer legend (same as week view)
   const legend = document.getElementById('footerLegend');
   legend.innerHTML = allUsers.map(u => `
     <div class="legend-item">
-      <i class="fas fa-house" style="color:${u.color}"></i>
-      <span>${t('legendHome')(u.name)}</span>
+      <i class="fas fa-house" style="color:${esc(u.color)}"></i>
+      <span>${esc(t('legendHome')(u.name))}</span>
     </div>
     <div class="legend-dot"></div>
   `).join('') + `
@@ -566,10 +576,10 @@ function buildMonthUsersHtml(date) {
                  : st === 'home'       ? u.color
                  : 'rgba(255,255,255,0.3)';
     return `<span class="month-user-row">
-      <i class="fas ${u.icon}" style="color:${u.color}"></i>
-      <span class="month-user-name" style="color:${u.color}">${u.name}</span>
-      <i class="fas ${sIcon}" style="color:${sColor}"></i>
-      <span class="month-status-label">${label}</span>
+      <i class="fas ${esc(u.icon)}" style="color:${esc(u.color)}"></i>
+      <span class="month-user-name" style="color:${esc(u.color)}">${esc(u.name)}</span>
+      <i class="fas ${esc(sIcon)}" style="color:${esc(sColor)}"></i>
+      <span class="month-status-label">${esc(label)}</span>
     </span>`;
   }).join('');
 }
@@ -599,10 +609,10 @@ function renderProfileHero() {
   const me   = currentUser();
   const hero = document.getElementById('profileHero');
   hero.innerHTML = `
-    <div class="profile-avatar-icon" style="background:linear-gradient(135deg,${me.color}33,${me.color}22); color:${me.color}; border:1.5px solid ${me.color}44;">
-      <i class="fas ${me.icon}"></i>
+    <div class="profile-avatar-icon" style="background:linear-gradient(135deg,${esc(me.color)}33,${esc(me.color)}22); color:${esc(me.color)}; border:1.5px solid ${esc(me.color)}44;">
+      <i class="fas ${esc(me.icon)}"></i>
     </div>
-    <div class="profile-hero-name">${me.name}</div>
+    <div class="profile-hero-name">${esc(me.name)}</div>
   `;
 }
 
