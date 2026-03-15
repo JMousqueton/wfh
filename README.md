@@ -14,7 +14,7 @@ A beautiful Progressive Web App (PWA) for tracking Work From Home days for two u
 - **Two users** — man (blue) and woman (pink), each with their own color theme
 - **French public holidays** — auto-fetched from [data.gouv.fr](https://calendrier.api.gouv.fr) on startup, greyed out as "Férié / Day Off" (`FRENCHDAYOFF=true`)
 - **Multi-device sync** — SQLite backend via Flask REST API
-- **1-year sessions** — stay logged in across all devices
+- **30-day sliding sessions** — stay logged in across all devices, session renews on every use
 - **Profile page** — change email, language and password
 - **French / English** — per-user language preference
 - **Conflict notifications** — email alert when both users work from home the same day
@@ -28,7 +28,7 @@ A beautiful Progressive Web App (PWA) for tracking Work From Home days for two u
 |----------|-----------|
 | Backend  | Python / Flask / SQLite |
 | Frontend | Vanilla JS / Bootstrap 5 / Font Awesome 7 |
-| Auth     | Bearer token (secrets.token_hex, 1-year expiry) |
+| Auth     | httpOnly cookie (secrets.token_hex, 30-day sliding expiry) |
 | PWA      | Service Worker, Web App Manifest |
 
 ## Quick start
@@ -113,6 +113,7 @@ WFH/
     ├── styles.css        # Glassmorphism dark theme
     ├── sw.js             # Service worker (offline cache)
     ├── manifest.json     # PWA manifest
+    ├── favicon.svg       # App favicon (matches logo gradient)
     ├── robots.txt        # Disallow all crawlers
     └── icons/            # PWA icons (192px, 512px)
 ```
