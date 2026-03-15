@@ -660,37 +660,41 @@ function updateNavBar() {
 async function renderConflictList() {
   document.getElementById('weekRange').textContent = t('conflictListTitle');
   const grid = document.getElementById('weekGrid');
-  grid.className = 'conflict-list loading';
+  grid.className = 'week-grid conflict-week-grid loading';
+
   const dates = await api('GET', '/conflicts');
-  grid.className = 'conflict-list';
-  grid.innerHTML = '';
 
   if (!dates || dates.length === 0) {
+    grid.className = 'conflict-list';
     grid.innerHTML = `<div class="conflict-empty"><i class="fas fa-circle-check"></i><span>${t('noConflicts')}</span></div>`;
     return;
   }
 
+  // Fetch calendar data for every week that contains a conflict date
+  const mondays = [...new Set(dates.map(d => isoDate(mondayOf(new Date(d + 'T12:00:00')))))];
+  await Promise.all(mondays.map(mon => calFetchMerge(mon)));
+
+  grid.className = 'week-grid conflict-week-grid';
+  grid.innerHTML = '';
+
+  const me     = currentUser();
+  const labels = t('dayLabels');
+
   dates.forEach(dateStr => {
-    const d    = new Date(dateStr + 'T12:00:00');
-    const label = d.toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    const item = document.createElement('div');
-    item.className = 'conflict-item';
-    item.innerHTML = `
-      <div class="conflict-item-icons">
-        ${allUsers.map(u => `<i class="fas ${u.icon}" style="color:${u.color}"></i>`).join('')}
-      </div>
-      <span class="conflict-item-date">${label}</span>
-      <i class="fas fa-chevron-right conflict-item-arrow"></i>
-    `;
-    item.addEventListener('click', () => {
-      const todayMonday  = mondayOf(new Date());
-      const targetMonday = mondayOf(d);
-      weekOffset = Math.round((targetMonday - todayMonday) / (7 * 24 * 60 * 60 * 1000));
-      viewMode = 'week';
-      updateNavBar();
-      renderCalendar();
+    const day     = new Date(dateStr + 'T12:00:00');
+    const today   = isToday(day);
+    const holiday = isHoliday(dateStr);
+    const card    = document.createElement('div');
+    card.className = `day-card all-home${today ? ' today' : ''}${holiday ? ' holiday' : ''}`;
+    card.innerHTML = buildDayCard(day, dateStr, today, me, labels[day.getDay() - 1] ?? DAY_LABELS_FALLBACK[day.getDay() - 1]);
+    grid.appendChild(card);
+  });
+
+  grid.querySelectorAll('.status-row.mine').forEach(row => {
+    row.addEventListener('click',   () => handleToggle(row.dataset.date, row.dataset.user));
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(row.dataset.date, row.dataset.user); }
     });
-    grid.appendChild(item);
   });
 }
 
