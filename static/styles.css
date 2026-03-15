@@ -731,21 +731,30 @@ body::after {
   font-size: 11px;
 }
 
+.month-cell {
+  align-items: flex-start;
+}
+
 .month-cell-users {
-  display: flex; align-items: center; gap: 5px; justify-content: center;
+  display: flex; flex-direction: column; gap: 3px; width: 100%;
 }
 
-.month-user-pair {
-  display: flex; align-items: center; gap: 3px;
-  font-size: 12px;
+.month-user-row {
+  display: flex; align-items: center; gap: 4px;
+  white-space: nowrap; overflow: hidden;
 }
-.month-user-pair i:first-child { font-size: 13px; }
-.month-user-pair i:last-child  { font-size: 11px; }
+.month-user-row i:first-child  { font-size: 12px; flex-shrink: 0; }
+.month-user-row i:nth-child(3) { font-size: 10px; flex-shrink: 0; }
 
-.month-users-sep {
-  color: rgba(255,255,255,0.2);
-  font-size: 10px;
-  font-style: normal;
+.month-user-name {
+  font-size: 10px; font-weight: 700;
+  flex-shrink: 0;
+}
+
+.month-status-label {
+  font-size: 10px; font-weight: 400;
+  color: var(--text-secondary);
+  overflow: hidden; text-overflow: ellipsis;
 }
 
 

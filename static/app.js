@@ -515,17 +515,18 @@ async function handleMonthToggle(cell, date, userId) {
 }
 
 function buildMonthUsersHtml(date) {
-  return allUsers.map((u, i) => {
+  return allUsers.map(u => {
     const st = calStatus(date, u.id);
-    const { icon: sIcon } = statusDisplay(st);
+    const { icon: sIcon, label } = statusDisplay(st);
     const sColor = st === 'travelling' ? '#f59e0b'
                  : st === 'home'       ? u.color
                  : 'rgba(255,255,255,0.3)';
-    const sep = (i < allUsers.length - 1) ? '<span class="month-users-sep">|</span>' : '';
-    return `<span class="month-user-pair">
+    return `<span class="month-user-row">
       <i class="fas ${u.icon}" style="color:${u.color}"></i>
+      <span class="month-user-name" style="color:${u.color}">${u.name}</span>
       <i class="fas ${sIcon}" style="color:${sColor}"></i>
-    </span>${sep}`;
+      <span class="month-status-label">${label}</span>
+    </span>`;
   }).join('');
 }
 
