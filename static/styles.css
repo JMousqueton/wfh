@@ -722,13 +722,15 @@ body::after {
 .month-cell.all-home { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); }
 
 .month-cell-date {
-  font-size: 13px; font-weight: 600; color: var(--text-primary); line-height: 1;
+  font-size: 20px; font-weight: 700; color: var(--text-primary); line-height: 1;
+  width: 100%; text-align: center;
 }
 .month-cell.today .month-cell-date {
-  width: 24px; height: 24px; border-radius: 50%;
+  width: 32px; height: 32px; border-radius: 50%;
   background: var(--text-primary); color: var(--bg-dark);
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px;
+  font-size: 16px;
+  margin: 0 auto;
 }
 
 .month-cell {
