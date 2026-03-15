@@ -646,7 +646,7 @@ def export_ics():
 
 
 # ── Static files ──────────────────────────────────────────────────────────────
-_BLOCKED = ('.py', '.db', '.db-wal', '.db-shm', '.env', '.git')
+_ALLOWED_EXTENSIONS = {'.html', '.js', '.css', '.json', '.svg', '.png', '.ico', '.txt', '.webmanifest'}
 
 @app.after_request
 def refresh_session_cookie(response):
@@ -731,7 +731,8 @@ def root():
 
 @app.get('/<path:path>')
 def serve_static(path):
-    if any(path.endswith(ext) for ext in _BLOCKED) or path.startswith('.'):
+    _, ext = os.path.splitext(path)
+    if ext.lower() not in _ALLOWED_EXTENSIONS:
         return '', 404
     return send_from_directory(STATIC_DIR, path)
 
