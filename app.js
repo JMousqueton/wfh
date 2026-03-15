@@ -9,7 +9,7 @@ const TRANSLATIONS = {
   en: {
     locale:                'en-US',
     // Login
-    logoSubtitle:          'Work From Home Schedule',
+    logoSubtitle:          'Work From Home Planner',
     usernamePlaceholder:   'Username',
     passwordPlaceholder:   'Password',
     signIn:                'Sign In',
