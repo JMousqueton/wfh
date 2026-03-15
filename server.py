@@ -31,9 +31,14 @@ DEBUG        = os.environ.get('DEBUG', 'false').lower() == 'true'
 APP_URL      = os.environ.get('APP_URL', f'http://localhost:{os.environ.get("PORT", 5000)}')
 SMTP_HOST    = os.environ.get('SMTP_HOST', '')
 SMTP_PORT    = int(os.environ.get('SMTP_PORT', 587))
-SMTP_USER    = os.environ.get('SMTP_USER', '')
-SMTP_PASS    = os.environ.get('SMTP_PASSWORD', '')
-SMTP_FROM    = os.environ.get('SMTP_FROM', os.environ.get('SMTP_USER', ''))
+SMTP_USER         = os.environ.get('SMTP_USER', '')
+SMTP_PASS         = os.environ.get('SMTP_PASSWORD', '')
+SMTP_FROM         = os.environ.get('SMTP_FROM', os.environ.get('SMTP_USER', ''))
+EMAIL_DELAY       = int(os.environ.get('EMAIL_DELAY', 900))   # seconds, default 15 min
+
+# ── Email queue: key=(cal_date, recipient_user_id) → threading.Timer ──────────
+_email_queue      = {}
+_email_queue_lock = threading.Lock()
 
 _MONTHS_FR = ['janvier','février','mars','avril','mai','juin',
               'juillet','août','septembre','octobre','novembre','décembre']
@@ -72,6 +77,57 @@ def _send_conflict_email(recipient_email, recipient_lang, other_name, cal_date):
         print(f'  Conflict email sent to {recipient_email}')
     except Exception as e:
         print(f'  Email error: {e}')
+
+
+def _deferred_conflict_check(cal_date, recipient_id, recipient_email,
+                              recipient_lang, other_id):
+    """Called after EMAIL_DELAY seconds — re-checks DB before sending."""
+    with _email_queue_lock:
+        _email_queue.pop((cal_date, recipient_id), None)
+
+    # Open a fresh connection (we're in a background thread, not a request)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    try:
+        # Confirm both users are still 'home' on that date
+        recipient_still_home = conn.execute(
+            "SELECT 1 FROM calendar WHERE date=? AND user_id=? AND status='home'",
+            (cal_date, recipient_id)
+        ).fetchone()
+        other_still_home = conn.execute(
+            "SELECT 1 FROM calendar WHERE date=? AND user_id=? AND status='home'",
+            (cal_date, other_id)
+        ).fetchone()
+        if not recipient_still_home or not other_still_home:
+            print(f'  Conflict resolved before delay elapsed — email cancelled.')
+            return
+        other_name = conn.execute(
+            'SELECT name FROM users WHERE id=?', (other_id,)
+        ).fetchone()['name']
+    finally:
+        conn.close()
+
+    _send_conflict_email(recipient_email, recipient_lang, other_name, cal_date)
+
+
+def _schedule_conflict_email(cal_date, recipient_id, recipient_email,
+                              recipient_lang, other_id):
+    """Cancel any pending email for this slot and schedule a fresh one."""
+    key = (cal_date, recipient_id)
+    with _email_queue_lock:
+        existing = _email_queue.pop(key, None)
+        if existing:
+            existing.cancel()
+        t = threading.Timer(
+            EMAIL_DELAY,
+            _deferred_conflict_check,
+            args=(cal_date, recipient_id, recipient_email, recipient_lang, other_id)
+        )
+        t.daemon = True
+        _email_queue[key] = t
+        t.start()
+    print(f'  Conflict email queued for {recipient_email} in {EMAIL_DELAY}s '
+          f'(date={cal_date})')
 
 
 def _rand_password():
@@ -383,23 +439,28 @@ def set_status(cal_date, user_id):
         )
     db.commit()
 
-    # Notify other users already home on the same day
+    # Email queue logic
     if status == 'home':
-        me = db.execute('SELECT name FROM users WHERE id = ?', (user_id,)).fetchone()
+        # Schedule a deferred notification for every other user already home
         others = db.execute(
-            "SELECT u.name, u.email, u.lang FROM calendar c "
+            "SELECT u.id, u.email, u.lang FROM calendar c "
             "JOIN users u ON c.user_id = u.id "
             "WHERE c.date = ? AND c.user_id != ? AND c.status = 'home'",
             (cal_date, user_id)
         ).fetchall()
-        if me and others:
-            for other in others:
-                if other['email']:
-                    threading.Thread(
-                        target=_send_conflict_email,
-                        args=(other['email'], other['lang'], me['name'], cal_date),
-                        daemon=True
-                    ).start()
+        for other in others:
+            if other['email']:
+                _schedule_conflict_email(
+                    cal_date, other['id'], other['email'], other['lang'], user_id
+                )
+    else:
+        # User left 'home' — cancel any pending email where they are the recipient
+        key = (cal_date, user_id)
+        with _email_queue_lock:
+            t = _email_queue.pop(key, None)
+            if t:
+                t.cancel()
+                print(f'  Pending conflict email cancelled (user left home).')
 
     return jsonify({'date': cal_date, 'user_id': user_id, 'status': status})
 

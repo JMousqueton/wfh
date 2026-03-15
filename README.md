@@ -12,8 +12,10 @@ A beautiful Progressive Web App (PWA) for tracking Work From Home days for two u
 - **Three statuses** per day: At office · At home · Travelling ✈️
 - **Two users** — man (blue) and woman (pink), each with their own color theme
 - **Multi-device sync** — SQLite backend via Flask REST API
-- **Profile page** — change language and password
+- **1-year sessions** — stay logged in across all devices
+- **Profile page** — change email, language and password
 - **French / English** — per-user language preference
+- **Conflict notifications** — email alert when both users work from home the same day
 - **PWA** — installable on iOS and Android, works offline
 - **iOS safe area** — supports Dynamic Island and home bar
 
@@ -23,7 +25,7 @@ A beautiful Progressive Web App (PWA) for tracking Work From Home days for two u
 |----------|-----------|
 | Backend  | Python / Flask / SQLite |
 | Frontend | Vanilla JS / Bootstrap 5 / Font Awesome 6 |
-| Auth     | Bearer token (secrets.token_hex) |
+| Auth     | Bearer token (secrets.token_hex, 1-year expiry) |
 | PWA      | Service Worker, Web App Manifest |
 
 ## Quick start
@@ -41,7 +43,7 @@ pip install -r requirements.txt
 
 # 4. Configure
 cp .env.example .env
-# Edit .env to set user names, port, etc.
+# Edit .env to set user names, URL, SMTP, etc.
 
 # 5. Run
 python server.py
@@ -55,51 +57,58 @@ Open `http://localhost:<PORT>` in your browser (default: [http://localhost:8001]
 
 All settings live in `.env`:
 
-| Variable        | Default     | Description               |
-|-----------------|-------------|---------------------------|
-| `HOST`          | `0.0.0.0`   | Bind address              |
-| `PORT`          | `8001`      | HTTP port                 |
-| `DEBUG`         | `false`     | Flask debug mode          |
-| `APP_URL`       | *(port)*    | Public URL (used in notification emails) |
-| `USER1_ID`      | `julien`    | Login username for user 1 |
-| `USER1_USERNAME`| `julien`    | Same as ID (can differ)   |
-| `USER1_NAME`    | `Julien`    | Display name              |
-| `USER2_ID`      | `mallorie`  | Login username for user 2 |
-| `USER2_USERNAME`| `mallorie`  | Same as ID (can differ)   |
-| `USER2_NAME`    | `Mallorie`  | Display name              |
-| `SMTP_HOST`     |             | SMTP server (leave empty to disable emails) |
-| `SMTP_PORT`     | `587`       | SMTP port                 |
-| `SMTP_USER`     |             | SMTP login                |
-| `SMTP_PASSWORD` |             | SMTP password             |
-| `SMTP_FROM`     |             | Sender address            |
+| Variable        | Default     | Description                              |
+|-----------------|-------------|------------------------------------------|
+| `HOST`          | `0.0.0.0`   | Bind address                             |
+| `PORT`          | `8001`      | HTTP port                                |
+| `DEBUG`         | `false`     | Flask debug mode                         |
+| `APP_URL`       | *(port)*    | Public URL — included in notification emails |
+| `USER1_ID`      | `julien`    | Login username for user 1                |
+| `USER1_USERNAME`| `julien`    | Same as ID (can differ)                  |
+| `USER1_NAME`    | `Julien`    | Display name                             |
+| `USER2_ID`      | `mallorie`  | Login username for user 2                |
+| `USER2_USERNAME`| `mallorie`  | Same as ID (can differ)                  |
+| `USER2_NAME`    | `Mallorie`  | Display name                             |
+| `EMAIL_DELAY`   | `900`       | Seconds to wait before sending a conflict email (default 15 min) |
+| `SMTP_HOST`     |             | SMTP server — leave empty to disable emails |
+| `SMTP_PORT`     | `587`       | SMTP port                                |
+| `SMTP_USER`     |             | SMTP login                               |
+| `SMTP_PASSWORD` |             | SMTP password                            |
+| `SMTP_FROM`     |             | Sender address                           |
 
 Passwords are **never stored in `.env`** — they are randomly generated (12 chars) on first startup.
 
 ### Email notifications
 
-When both users are working from home on the same day, the user who was already marked as "home" receives an email in their own language:
+When both users are working from home on the same day, the other user receives an email in their own language. To avoid noise from rapid status changes, the email is **queued for `EMAIL_DELAY` seconds** and only sent if the conflict still exists when the timer fires. Toggling away from "home" before the timer expires cancels the email.
 
-> **Attention !**
+**Example (French):**
+> **[Télétravail] Attention Conflit !**
 > Julien sera également en télétravail le lundi 15 mars 2026.
-> Lien vers le site : https://wfh.example.com
+> Lien vers le site : https://wfh.mousqueton.io
 
-Email is only sent if the recipient has set their email address in their profile and `SMTP_HOST` is configured.
+**Example (English):**
+> **[WFH] Attention Conflict!**
+> Julien will also work from home on Monday, March 15, 2026.
+> Link to the site: https://wfh.mousqueton.io
+
+Emails are only sent if the recipient has set an email address in their profile and `SMTP_HOST` is configured.
 
 ## Project structure
 
 ```
 WFH/
-├── server.py          # Flask backend (API + static serving)
-├── app.js             # Frontend logic (i18n, calendar, auth)
-├── index.html         # Single-page app shell
-├── styles.css         # Glassmorphism dark theme
-├── sw.js              # Service worker (offline cache)
-├── manifest.json      # PWA manifest
-├── icons/             # PWA icons (192px, 512px)
-├── requirements.txt   # Python dependencies
-├── .env.example       # Configuration template
+├── server.py             # Flask backend (API + static serving)
+├── app.js                # Frontend logic (i18n, calendar, auth)
+├── index.html            # Single-page app shell
+├── styles.css            # Glassmorphism dark theme
+├── sw.js                 # Service worker (offline cache)
+├── manifest.json         # PWA manifest
+├── icons/                # PWA icons (192px, 512px)
+├── requirements.txt      # Python dependencies
+├── .env.example          # Configuration template
 ├── wfh.example.com.conf  # nginx virtual host template
-└── INSTALL.md         # Production deployment guide
+└── INSTALL.md            # Production deployment guide
 ```
 
 ## Production deployment
