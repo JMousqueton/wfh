@@ -651,7 +651,7 @@ def security_headers(response):
         "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com fonts.googleapis.com; "
         "font-src 'self' cdnjs.cloudflare.com fonts.gstatic.com; "
         "img-src 'self' data:; "
-        "connect-src 'self' https://calendrier.api.gouv.fr; "
+        "connect-src 'self' https://calendrier.api.gouv.fr https://cdn.jsdelivr.net; "
         "worker-src 'self'; "
         "frame-ancestors 'none'; "
         "base-uri 'self';"
