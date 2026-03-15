@@ -346,7 +346,8 @@ def require_auth(f):
 # ── API – authentication ──────────────────────────────────────────────────────
 @app.post('/api/auth/login')
 def auth_login():
-    if not _check_login_rate(request.remote_addr):
+    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
+    if not _check_login_rate(client_ip):
         return jsonify({'error': 'Too many login attempts. Please wait a minute.'}), 429
 
     body     = request.get_json(silent=True) or {}
