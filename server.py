@@ -28,7 +28,7 @@ load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR   = os.path.join(BASE_DIR, 'static')
 DB_PATH      = os.path.join(BASE_DIR, 'wfh.db')
-SESSION_DAYS = 365
+SESSION_DAYS = 30
 HOST         = os.environ.get('HOST', '0.0.0.0')
 PORT         = int(os.environ.get('PORT', 5000))
 DEBUG        = os.environ.get('DEBUG', 'false').lower() == 'true'
@@ -336,8 +336,13 @@ def require_auth(f):
             db.execute('DELETE FROM sessions WHERE token = ?', (token,))
             db.commit()
             return jsonify({'error': 'Session expired'}), 401
-        g.user_id = row['user_id']
-        g.token   = token
+        # Sliding window: push expiry forward on every request
+        new_expires = (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=SESSION_DAYS)).isoformat()
+        db.execute('UPDATE sessions SET expires_at = ? WHERE token = ?', (new_expires, token))
+        db.commit()
+        g.user_id         = row['user_id']
+        g.token           = token
+        g.session_expires = new_expires
         return f(*args, **kwargs)
     return wrapper
 
@@ -642,6 +647,20 @@ def export_ics():
 
 # ── Static files ──────────────────────────────────────────────────────────────
 _BLOCKED = ('.py', '.db', '.db-wal', '.db-shm', '.env', '.git')
+
+@app.after_request
+def refresh_session_cookie(response):
+    """Re-set the session cookie on every authenticated response to slide the expiry."""
+    if hasattr(g, 'token'):
+        response.set_cookie(
+            'wfh_session', g.token,
+            max_age=SESSION_DAYS * 86400,
+            httponly=True,
+            secure=not DEBUG,
+            samesite='Strict',
+            path='/',
+        )
+    return response
 
 @app.after_request
 def security_headers(response):
