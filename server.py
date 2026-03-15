@@ -466,6 +466,76 @@ def set_status(cal_date, user_id):
     return jsonify({'date': cal_date, 'user_id': user_id, 'status': status})
 
 
+# ── ICS export ────────────────────────────────────────────────────────────────
+_ICS_STATUS_LABELS = {
+    'en': {'home': 'at home', 'travelling': 'Travelling'},
+    'fr': {'home': 'en télétravail', 'travelling': 'en déplacement'},
+}
+
+def _build_ics(events, cal_name):
+    """Build an iCalendar string from a list of (date_str, summary) tuples."""
+    lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//WFH Planner//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        f'X-WR-CALNAME:{cal_name}',
+    ]
+    for date_str, summary in events:
+        d       = date_type.fromisoformat(date_str)
+        dtstart = d.strftime('%Y%m%d')
+        dtend   = (d + timedelta(days=1)).strftime('%Y%m%d')
+        uid     = f'{date_str}-{summary.replace(" ", "-").lower()}@wfh'
+        lines += [
+            'BEGIN:VEVENT',
+            f'DTSTART;VALUE=DATE:{dtstart}',
+            f'DTEND;VALUE=DATE:{dtend}',
+            f'SUMMARY:{summary}',
+            f'UID:{uid}',
+            'CLASS:PRIVATE',
+            'TRANSP:TRANSPARENT',
+            'END:VEVENT',
+        ]
+    lines.append('END:VCALENDAR')
+    return '\r\n'.join(lines) + '\r\n'
+
+
+@app.get('/api/calendar/export.ics')
+@require_auth
+def export_ics():
+    try:
+        monday = date_type.fromisoformat(request.args.get('monday', ''))
+    except ValueError:
+        return jsonify({'error': 'monday parameter must be YYYY-MM-DD'}), 400
+
+    db   = get_db()
+    me   = db.execute('SELECT lang FROM users WHERE id = ?', (g.user_id,)).fetchone()
+    lang = me['lang'] if me else 'en'
+
+    dates = [(monday + timedelta(days=i)).isoformat() for i in range(5)]
+    rows  = db.execute(
+        f"SELECT c.date, c.status, u.name FROM calendar c "
+        f"JOIN users u ON c.user_id = u.id "
+        f"WHERE c.date IN ({','.join('?'*5)}) AND c.user_id != ? AND c.status IS NOT NULL",
+        (*dates, g.user_id)
+    ).fetchall()
+
+    labels = _ICS_STATUS_LABELS.get(lang, _ICS_STATUS_LABELS['en'])
+    events = [
+        (r['date'], f"{r['name']} {labels.get(r['status'], r['status'])}")
+        for r in rows
+    ]
+    events.sort(key=lambda e: e[0])
+
+    ics_content = _build_ics(events, f'WFH – {monday}')
+    filename    = f'wfh-{monday}.ics'
+    return ics_content, 200, {
+        'Content-Type':        'text/calendar; charset=utf-8',
+        'Content-Disposition': f'attachment; filename="{filename}"',
+    }
+
+
 # ── Static files ──────────────────────────────────────────────────────────────
 _BLOCKED = ('.py', '.db', '.db-wal', '.db-shm', '.env', '.git')
 

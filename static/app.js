@@ -29,6 +29,7 @@ const TRANSLATIONS = {
     legendOffice:          'At office',
     legendTravel:          'Travelling',
     tapToToggle:           'Tap your own row to toggle status',
+    exportIcs:             'Export week (.ics)',
     // Week range
     weekRange(days) {
       const s = days[0], e = days[4];
@@ -83,6 +84,7 @@ const TRANSLATIONS = {
     legendOffice:          'Au bureau',
     legendTravel:          'En déplacement',
     tapToToggle:           'Tapez votre ligne pour changer le statut',
+    exportIcs:             'Exporter la semaine (.ics)',
     // Week range
     weekRange(days) {
       const s = days[0], e = days[4];
@@ -613,6 +615,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const dow  = new Date().getDay();
     weekOffset = (dow === 0 || dow === 6) ? 1 : 0;
     renderCalendar();
+  });
+
+  /* ---- ICS export ---- */
+  document.getElementById('exportIcsBtn').addEventListener('click', async () => {
+    const monday = isoDate(weekDays()[0]);
+    const token  = localStorage.getItem(TOKEN_KEY);
+    const res    = await fetch(`/api/calendar/export.ics?monday=${monday}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = Object.assign(document.createElement('a'), {
+      href: url, download: `wfh-${monday}.ics`
+    });
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   });
 
   /* ---- Swipe ---- */
