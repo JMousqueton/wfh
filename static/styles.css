@@ -430,6 +430,21 @@ body::after {
   display: flex; flex-direction: column; gap: 8px;
 }
 
+/* ---- Holiday day (weekly view) ---- */
+.day-card.holiday {
+  background: rgba(100,116,139,0.08);
+  border-color: rgba(100,116,139,0.2);
+}
+.day-holiday {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 5px; padding: 12px 10px;
+  color: var(--text-secondary);
+}
+.day-holiday i { font-size: 20px; }
+.holiday-label { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.holiday-name  { font-size: 11px; text-align: center; opacity: 0.7; }
+
 /* ---- Status row ---- */
 .status-row {
   display: flex; align-items: center; gap: 10px;
@@ -720,6 +735,16 @@ body::after {
 .month-cell.today { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.06); }
 .month-cell.out-of-month { opacity: 0.2; cursor: default; pointer-events: none; background: transparent; border-color: transparent; }
 .month-cell.all-home { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); }
+.month-cell.holiday  {
+  background: rgba(100,116,139,0.08);
+  border-color: rgba(100,116,139,0.2);
+  cursor: default; pointer-events: none;
+}
+
+.month-holiday-label {
+  display: flex; align-items: center; gap: 4px;
+  color: var(--text-secondary); font-size: 10px; font-weight: 600;
+}
 
 .month-cell-date {
   font-size: 20px; font-weight: 700; color: var(--text-primary); line-height: 1;

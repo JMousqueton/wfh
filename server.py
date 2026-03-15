@@ -36,6 +36,7 @@ SMTP_USER         = os.environ.get('SMTP_USER', '')
 SMTP_PASS         = os.environ.get('SMTP_PASSWORD', '')
 SMTP_FROM         = os.environ.get('SMTP_FROM', os.environ.get('SMTP_USER', ''))
 EMAIL_DELAY       = int(os.environ.get('EMAIL_DELAY', 900))   # seconds, default 15 min
+FRENCH_DAY_OFF    = os.environ.get('FRENCHDAYOFF', 'false').lower() == 'true'
 
 # ── Email queue: key=(cal_date, recipient_user_id) → threading.Timer ──────────
 _email_queue      = {}
@@ -202,6 +203,11 @@ def init_db():
             PRIMARY KEY (date, user_id)
         );
 
+        CREATE TABLE IF NOT EXISTS holidays (
+            date    TEXT PRIMARY KEY,
+            name_fr TEXT NOT NULL
+        );
+
         CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
         CREATE INDEX IF NOT EXISTS idx_calendar_date ON calendar(date);
     """)
@@ -233,6 +239,8 @@ def init_db():
 
     conn.close()
     purge_old_calendar()
+    if FRENCH_DAY_OFF:
+        _load_french_holidays()
 
 
 def purge_old_calendar():
@@ -251,6 +259,30 @@ def _purge_scheduler():
     while True:
         threading.Event().wait(timeout=86400)  # sleep 24 h
         purge_old_calendar()
+
+
+def _load_french_holidays():
+    """Fetch French public holidays from data.gouv.fr and store in DB."""
+    import urllib.request, json
+    current_year = datetime.now().year
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        for year in (current_year, current_year + 1):
+            url = f'https://calendrier.api.gouv.fr/jours-feries/metropole/{year}.json'
+            try:
+                with urllib.request.urlopen(url, timeout=10) as resp:
+                    data = json.loads(resp.read().decode())
+                for date_str, name_fr in data.items():
+                    conn.execute(
+                        'INSERT OR REPLACE INTO holidays (date, name_fr) VALUES (?,?)',
+                        (date_str, name_fr)
+                    )
+                conn.commit()
+                print(f'  Loaded {len(data)} French holidays for {year}')
+            except Exception as e:
+                print(f'  Could not load French holidays for {year}: {e}')
+    finally:
+        conn.close()
 
 
 # ── Auth helpers ──────────────────────────────────────────────────────────────
@@ -410,6 +442,14 @@ def get_calendar():
     result = {d: {} for d in dates}
     for row in rows:
         result[row['date']][row['user_id']] = row['status']
+
+    if FRENCH_DAY_OFF:
+        hols = get_db().execute(
+            f"SELECT date, name_fr FROM holidays WHERE date IN ({','.join('?'*5)})",
+            dates
+        ).fetchall()
+        for h in hols:
+            result[h['date']]['_holiday'] = h['name_fr']
 
     return jsonify(result)
 

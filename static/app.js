@@ -62,6 +62,7 @@ const TRANSLATIONS = {
     installHint:           'Add to Home Screen',
     monthlyView:           'Monthly view',
     weeklyView:            'Weekly view',
+    dayOff:                'Day Off',
   },
   fr: {
     locale:                'fr-FR',
@@ -122,6 +123,7 @@ const TRANSLATIONS = {
     installHint:           'Ajouter à l\'écran d\'accueil',
     monthlyView:           'Vue mensuelle',
     weeklyView:            'Vue hebdomadaire',
+    dayOff:                'Férié',
   },
 };
 
@@ -283,6 +285,9 @@ function isToday(d) {
          d.getFullYear() === n.getFullYear();
 }
 
+function isHoliday(date)   { return !!_calCache[date]?._holiday; }
+function holidayName(date) { return _calCache[date]?._holiday ?? ''; }
+
 function currentMonthDate() {
   const d = new Date();
   d.setDate(1);
@@ -354,10 +359,11 @@ async function renderCalendar() {
   grid.innerHTML = '';
   days.forEach((day, i) => {
     const date  = isoDate(day);
-    const today = isToday(day);
-    const allHome = allUsers.length > 0 && allUsers.every(u => calStatus(date, u.id) === 'home');
+    const today   = isToday(day);
+    const holiday = isHoliday(date);
+    const allHome = !holiday && allUsers.length > 0 && allUsers.every(u => calStatus(date, u.id) === 'home');
     const card  = document.createElement('div');
-    card.className = `day-card${today ? ' today' : ''}${allHome ? ' all-home' : ''}`;
+    card.className = `day-card${today ? ' today' : ''}${allHome ? ' all-home' : ''}${holiday ? ' holiday' : ''}`;
     card.innerHTML  = buildDayCard(day, date, today, me, labels[i] ?? DAY_LABELS_FALLBACK[i]);
     grid.appendChild(card);
   });
@@ -371,17 +377,26 @@ async function renderCalendar() {
 }
 
 function buildDayCard(day, date, today, me, dayLabel) {
-  const rows = allUsers.map(u => buildStatusRow(u, date, u.id === me.id)).join('');
-  return `
+  const header = `
     <div class="day-header">
       <div>
         <div class="day-name">${dayLabel}</div>
         <div class="day-date">${t('dayDate')(day)}</div>
       </div>
       ${today ? '<div class="today-dot"><i class="fas fa-circle"></i></div>' : ''}
-    </div>
-    <div class="day-body">${rows}</div>
-  `;
+    </div>`;
+
+  if (isHoliday(date)) {
+    return `${header}
+    <div class="day-holiday">
+      <i class="fas fa-calendar-xmark"></i>
+      <span class="holiday-label">${t('dayOff')}</span>
+      <span class="holiday-name">${holidayName(date)}</span>
+    </div>`;
+  }
+
+  const rows = allUsers.map(u => buildStatusRow(u, date, u.id === me.id)).join('');
+  return `${header}<div class="day-body">${rows}</div>`;
 }
 
 function statusDisplay(status) {
@@ -490,10 +505,11 @@ async function renderMonthView() {
       const date    = isoDate(day);
       const inMonth = day.getMonth() === month && day.getFullYear() === year;
       const today   = isToday(day);
-      const allHome = inMonth && allUsers.length > 0 && allUsers.every(u => calStatus(date, u.id) === 'home');
+      const holiday = inMonth && isHoliday(date);
+      const allHome = inMonth && !holiday && allUsers.length > 0 && allUsers.every(u => calStatus(date, u.id) === 'home');
 
       const cell = document.createElement('div');
-      cell.className = `month-cell${today ? ' today' : ''}${!inMonth ? ' out-of-month' : ''}${allHome ? ' all-home' : ''}`;
+      cell.className = `month-cell${today ? ' today' : ''}${!inMonth ? ' out-of-month' : ''}${holiday ? ' holiday' : ''}${allHome ? ' all-home' : ''}`;
 
       const usersHtml = inMonth ? buildMonthUsersHtml(date) : '';
 
@@ -502,7 +518,7 @@ async function renderMonthView() {
         <div class="month-cell-users">${usersHtml}</div>
       `;
 
-      if (inMonth) cell.addEventListener('click', () => handleMonthToggle(cell, date, me.id));
+      if (inMonth && !holiday) cell.addEventListener('click', () => handleMonthToggle(cell, date, me.id));
       grid.appendChild(cell);
     }
   });
@@ -515,6 +531,12 @@ async function handleMonthToggle(cell, date, userId) {
 }
 
 function buildMonthUsersHtml(date) {
+  if (isHoliday(date)) {
+    return `<span class="month-holiday-label">
+      <i class="fas fa-calendar-xmark"></i>
+      <span>${t('dayOff')}</span>
+    </span>`;
+  }
   return allUsers.map(u => {
     const st = calStatus(date, u.id);
     const { icon: sIcon, label } = statusDisplay(st);
